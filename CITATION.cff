@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: "If you use this software or build on this framework, please cite it as below."
+type: software
+title: "Ternary Semantic UUID (TSUUID) Framework"
+authors:
+  - family-names: "Hay"
+    given-names: "Dennis Evan"
+    country: "CA"
+version: "0.1.0"
+date-released: "2026-03-12"
+license: MIT
+url: "https://github.com/DennisEvanHay/tsuuid-framework"
+repository-code: "https://github.com/DennisEvanHay/tsuuid-framework"
+keywords:
+  - ternary quantization
+  - semantic addressing
+  - UUID
+  - BitNet
+  - inverse scaling
+  - distributed representation
+  - information theory
+  - qutrit
+abstract: >-
+  A universal information framework that encodes semantic meaning 
+  as 81-dimensional ternary displacements within standard UUIDs,
+  eliminating the distinction between data and understanding.
+  Built on BitNet b1.58 addition-only arithmetic, RFC 9562 UUID v8,
+  and transformer-based shared reference frames.

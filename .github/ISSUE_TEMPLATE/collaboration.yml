@@ -1,0 +1,68 @@
+name: Research Collaboration Proposal
+description: Propose a research collaboration on the TSUUID framework
+title: "[Collab] "
+labels: ["collaboration"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for your interest in collaborating on the TSUUID framework.
+        Please describe your background and proposed contribution.
+  - type: input
+    id: name
+    attributes:
+      label: Your Name
+      placeholder: Dr. Jane Smith
+    validations:
+      required: true
+  - type: input
+    id: affiliation
+    attributes:
+      label: Affiliation
+      placeholder: University of Example, Department of Computer Science
+    validations:
+      required: true
+  - type: dropdown
+    id: domain
+    attributes:
+      label: Research Domain
+      options:
+        - Information Theory / Coding Theory
+        - Database Systems
+        - Quantum Computing / Qutrits
+        - Computational Neuroscience
+        - Computer Architecture / Hardware
+        - NLP / Embeddings
+        - Standards (IETF / IEEE)
+        - Other (describe below)
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed Contribution
+      description: What would you like to work on? What's your hypothesis?
+      placeholder: |
+        Describe your proposed research contribution. Examples:
+        - "I'd like to formally prove/disprove that 81 dimensions are sufficient for domain X"
+        - "I can benchmark cross-schema resolution against traditional ETL on our production databases"
+        - "I want to simulate qutrit UUID behavior on our quantum hardware"
+    validations:
+      required: true
+  - type: textarea
+    id: resources
+    attributes:
+      label: Resources You Bring
+      description: Hardware, datasets, grad students, domain expertise, etc.
+      placeholder: "Access to X, expertise in Y, team of Z"
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Collaboration Terms
+      options:
+        - label: I've read the papers in docs/
+          required: true
+        - label: I understand this is MIT-licensed open research
+          required: true
+        - label: I'm willing to publish findings openly
+          required: true

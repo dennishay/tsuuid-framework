@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "tsuuid"
+version = "0.1.0"
+description = "Ternary Semantic UUID Framework — Where Data IS Understanding"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "Dennis Evan Hay"}
+]
+keywords = ["uuid", "ternary", "semantic", "bitnet", "information-theory", "knowledge-representation"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Topic :: Database",
+]
+dependencies = [
+    "numpy>=1.24",
+]
+
+[project.optional-dependencies]
+bitnet = ["huggingface-hub", "transformers"]
+databases = ["sqlalchemy>=2.0", "psycopg2-binary", "pymysql"]
+dev = ["pytest>=7.0", "pytest-cov", "ruff", "mypy"]
+all = ["tsuuid[bitnet,databases,dev]"]
+
+[project.urls]
+Homepage = "https://github.com/DennisEvanHay/tsuuid-framework"
+Documentation = "https://github.com/DennisEvanHay/tsuuid-framework/tree/main/docs"
+Repository = "https://github.com/DennisEvanHay/tsuuid-framework"
+Issues = "https://github.com/DennisEvanHay/tsuuid-framework/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]

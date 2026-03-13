@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TSUUID Brain — Ternary Knowledge Blocks</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0a0f;
+  --surface: #12121a;
+  --surface2: #1a1a26;
+  --border: #2a2a3a;
+  --text: #e0e0ec;
+  --text-dim: #6a6a80;
+  --accent: #6366f1;
+  --accent-glow: rgba(99, 102, 241, 0.3);
+  --positive: #22d3ee;
+  --negative: #f472b6;
+  --neutral: #3a3a4a;
+  --knowledge-glow: rgba(34, 211, 238, 0.15);
+  --danger: #ef4444;
+  --success: #10b981;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Ambient background */
+body::before {
+  content: '';
+  position: fixed;
+  top: -50%; left: -50%;
+  width: 200%; height: 200%;
+  background: radial-gradient(ellipse at 30% 20%, rgba(99,102,241,0.06) 0%, transparent 50%),
+              radial-gradient(ellipse at 70% 80%, rgba(34,211,238,0.04) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.app { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 24px; }
+
+/* Header */
+.header {
+  text-align: center;
+  padding: 40px 0 32px;
+}
+.header h1 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 2.2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, var(--positive), var(--accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.header .subtitle {
+  color: var(--text-dim);
+  font-size: 0.95rem;
+  margin-top: 8px;
+  font-weight: 300;
+}
+.header .equation {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  margin-top: 12px;
+  opacity: 0.7;
+}
+
+/* Layout */
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 24px;
+  margin-top: 24px;
+}
+
+@media (max-width: 1024px) {
+  .layout { grid-template-columns: 1fr; }
+}
+
+/* Brain visualization */
+.brain-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+.brain-panel::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--positive), var(--accent), var(--negative));
+  opacity: 0.6;
+}
+
+.brain-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.brain-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.brain-stats {
+  display: flex;
+  gap: 20px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+}
+.stat { display: flex; align-items: center; gap: 6px; }
+.stat-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+}
+.stat-dot.pos { background: var(--positive); box-shadow: 0 0 8px var(--positive); }
+.stat-dot.neg { background: var(--negative); box-shadow: 0 0 8px var(--negative); }
+.stat-dot.zero { background: var(--neutral); }
+
+/* 81-trit grid */
+.trit-grid {
+  display: grid;
+  grid-template-columns: repeat(27, 1fr);
+  gap: 3px;
+  margin-bottom: 20px;
+}
+.trit-cell {
+  aspect-ratio: 1;
+  border-radius: 3px;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  cursor: default;
+  position: relative;
+  min-width: 0;
+}
+.trit-cell.pos {
+  background: var(--positive);
+  box-shadow: 0 0 8px rgba(34, 211, 238, 0.4);
+}
+.trit-cell.neg {
+  background: var(--negative);
+  box-shadow: 0 0 8px rgba(244, 114, 182, 0.4);
+}
+.trit-cell.zero {
+  background: var(--neutral);
+  opacity: 0.4;
+}
+.trit-cell:hover {
+  transform: scale(1.8);
+  z-index: 10;
+}
+.trit-cell .tooltip {
+  display: none;
+  position: absolute;
+  bottom: 120%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.65rem;
+  font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap;
+  z-index: 100;
+  pointer-events: none;
+}
+.trit-cell:hover .tooltip { display: block; }
+
+/* Layer labels */
+.layer-labels {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.layer-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+/* Knowledge metrics */
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 16px;
+}
+.metric-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  text-align: center;
+}
+.metric-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--positive);
+}
+.metric-value.energy { color: var(--negative); }
+.metric-value.efficiency { color: var(--accent); }
+.metric-label {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Knowledge blocks panel */
+.blocks-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.input-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+}
+.input-section h3 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 12px;
+}
+
+.input-row {
+  display: flex;
+  gap: 8px;
+}
+.input-row textarea {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85rem;
+  resize: none;
+  height: 60px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.input-row textarea:focus {
+  border-color: var(--accent);
+}
+.input-row textarea::placeholder {
+  color: var(--text-dim);
+  opacity: 0.5;
+}
+
+.btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.btn-add {
+  background: var(--accent);
+  color: white;
+  align-self: flex-end;
+}
+.btn-add:hover { background: #5558e6; transform: translateY(-1px); }
+.btn-add:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+.btn-remove {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  padding: 4px 8px;
+  font-size: 0.65rem;
+}
+.btn-remove:hover { border-color: var(--danger); color: var(--danger); }
+.btn-reset {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  width: 100%;
+  margin-top: 8px;
+}
+.btn-reset:hover { border-color: var(--danger); color: var(--danger); }
+
+/* Block list */
+.block-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 500px;
+  overflow-y: auto;
+}
+.block-list::-webkit-scrollbar { width: 4px; }
+.block-list::-webkit-scrollbar-track { background: transparent; }
+.block-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.block-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  animation: slideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.block-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.block-number {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--accent);
+  font-weight: 700;
+}
+.block-text {
+  font-size: 0.8rem;
+  color: var(--text);
+  line-height: 1.4;
+  margin-bottom: 8px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.block-uuid {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  opacity: 0.6;
+  word-break: break-all;
+}
+.block-trits {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  color: var(--text-dim);
+  margin-top: 4px;
+  letter-spacing: 0.5px;
+  opacity: 0.5;
+}
+.block-trits .t-pos { color: var(--positive); }
+.block-trits .t-neg { color: var(--negative); }
+
+/* Connection lines visualization */
+.connections-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+}
+.connections-section h3 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+}
+.connection-note {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  font-style: italic;
+  line-height: 1.5;
+}
+
+/* Presets */
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.preset-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.preset-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 32px 0 16px;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  font-family: 'JetBrains Mono', monospace;
+}
+.footer a { color: var(--accent); text-decoration: none; }
+.footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <h1>TSUUID Brain</h1>
+    <div class="subtitle">Ternary Semantic Knowledge Blocks — Add, Remove, Compose</div>
+    <div class="equation">K(n) = 2ⁿ − 1 &nbsp;|&nbsp; dE/dn = 0.028J &nbsp;|&nbsp; order ≠ important &nbsp;|&nbsp; only connection</div>
+  </div>
+
+  <div class="layout">
+    <!-- Brain visualization -->
+    <div class="brain-panel">
+      <div class="brain-header">
+        <div class="brain-title">81-Dimensional Brain State</div>
+        <div class="brain-stats">
+          <div class="stat"><div class="stat-dot pos"></div><span id="pos-count">0</span> positive</div>
+          <div class="stat"><div class="stat-dot neg"></div><span id="neg-count">0</span> negative</div>
+          <div class="stat"><div class="stat-dot zero"></div><span id="zero-count">81</span> neutral</div>
+        </div>
+      </div>
+
+      <div class="layer-labels">
+        <span class="layer-tag">1–10 protocol</span>
+        <span class="layer-tag">11–20 hardware</span>
+        <span class="layer-tag">21–35 organization</span>
+        <span class="layer-tag">36–55 application</span>
+        <span class="layer-tag">56–70 entity</span>
+        <span class="layer-tag">71–81 field</span>
+      </div>
+
+      <div class="trit-grid" id="trit-grid"></div>
+
+      <div class="metrics">
+        <div class="metric-card">
+          <div class="metric-value" id="k-value">0</div>
+          <div class="metric-label">Knowledge K(n)</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value energy" id="e-value">0</div>
+          <div class="metric-label">Energy (J)</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value efficiency" id="eta-value">—</div>
+          <div class="metric-label">η = K/E</div>
+        </div>
+      </div>
+
+      <div class="connections-section" style="margin-top: 16px;">
+        <h3>Emergent Relationships</h3>
+        <div id="relationships" class="connection-note">
+          Add knowledge blocks to see emergent relationships form.
+          Order does not matter — only connection.
+        </div>
+      </div>
+    </div>
+
+    <!-- Input panel -->
+    <div class="blocks-panel">
+      <div class="input-section">
+        <h3>Add Knowledge Block <span id="block-counter" style="color: var(--accent);">(0/10)</span></h3>
+        <div class="input-row">
+          <textarea id="input-text" placeholder="Enter knowledge... e.g. 'Valve pressure reduced 15% after cleaning'"></textarea>
+        </div>
+        <button class="btn btn-add" id="add-btn" onclick="addBlock()" style="margin-top: 8px; width: 100%;">
+          + Add to Brain
+        </button>
+
+        <div class="presets">
+          <button class="preset-btn" onclick="addPreset('power')">⚡ Power Eng</button>
+          <button class="preset-btn" onclick="addPreset('finance')">💰 Finance</button>
+          <button class="preset-btn" onclick="addPreset('legal')">⚖️ Legal</button>
+          <button class="preset-btn" onclick="addPreset('technical')">🔧 Technical</button>
+          <button class="preset-btn" onclick="addPreset('medical')">🏥 Medical</button>
+        </div>
+
+        <button class="btn btn-reset" onclick="resetBrain()">Reset Brain</button>
+      </div>
+
+      <div class="block-list" id="block-list"></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <a href="https://github.com/DennisEvanHay/tsuuid-framework">GitHub</a> &nbsp;·&nbsp;
+    Dennis Evan Hay &nbsp;·&nbsp; MIT License &nbsp;·&nbsp; 2026
+    <br><br>
+    <span style="opacity:0.5;">Data IS Understanding — 81 ternary dimensions — addition only</span>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════
+// TSUUID Brain — Core Engine
+// ════════════════════════════════════════════════════════
+
+const N_DIMS = 81;
+const MAX_BLOCKS = 10;
+const E_UUID = 0.028; // Joules per operation (Ma et al., 2025)
+
+// Axis definitions (abbreviated)
+const AXES = [
+  "temporality","modality","certainty","cardinality","obligation",
+  "visibility","mutability","directionality","granularity","lifecycle",
+  "compute_class","connectivity","storage_class","precision","endianness",
+  "word_width","security_level","power_state","locality","determinism",
+  "ownership","confidentiality","authority","compliance","cost_center",
+  "urgency","approval_state","dept_class","geographic_scope","retention",
+  "audit_status","stakeholder","maturity","impact","frequency",
+  "domain","data_type","flow_direction","value_sign","scale",
+  "relationship","status","priority","source_type","currency",
+  "aggregation","sentiment","action_type","entity_class","quantity_type",
+  "time_horizon","validation","version_state","dependency","format_class",
+  "entity_role","identity_type","completeness","encoding","reference_type",
+  "nullability","uniqueness","ordering","indexability","volatility",
+  "precision_level","origin","size_class","link_density","update_mode",
+  "numeric_sign","bound_type","comparison","trend","anomaly",
+  "confidence","relevance","recency","specificity","affect","salience"
+];
+
+const TRIT_LABELS = {
+  '-1': ['past','deletion','denied','singular','forbidden','private','immutable','inbound','aggregate','archived',
+         'embedded','offline','ephemeral','approximate','little','narrow','untrusted','sleep','remote','stochastic',
+         'external','classified','subordinate','non-compliant','expense','deferred','rejected','support','local','delete',
+         'flagged','external','experimental','low','rare',
+         'technical','unstructured','outflow','negative','small',
+         'child','failed','low','computed','stale','detail','negative','query','event','rate',
+         'historical','invalid','deprecated','blocked','binary',
+         'object','anonymous','partial','compressed','symbolic',
+         'null','duplicate','unordered','unindexed','stable',
+         'approximate','derived','small','isolated','batch',
+         'negative','lower','less_than','decreasing','below_normal',
+         'low','tangential','old','general','negative','background'],
+  '0':  Array(81).fill('neutral'),
+  '1':  ['future','creation','confirmed','plural','required','public','mutable','outbound','atomic','draft',
+         'server','always-on','persistent','exact','big','wide','hardened','active','local','deterministic',
+         'internal','open','authoritative','compliant','revenue','critical','approved','operations','global','retain',
+         'cleared','internal','proven','high','continuous',
+         'business','structured','inflow','positive','large',
+         'parent','complete','high','observed','projected','rollup','positive','mutation','physical','cumulative',
+         'forecast','validated','next','blocking','text',
+         'subject','identified','complete','expanded','semantic',
+         'populated','unique','total','primary','volatile',
+         'high-precision','original','large','dense','realtime',
+         'positive','upper','greater_than','increasing','above_normal',
+         'high','primary','new','specific','positive','foreground']
+};
+
+// State
+let blocks = [];
+let brainState = new Array(N_DIMS).fill(0);
+
+// Keyword → dimension mapping (simplified semantic encoder)
+const KEYWORD_MAP = [
+  [['past','history','previous','ago','last year'], 0, -1],
+  [['future','forecast','projected','upcoming','next'], 0, 1],
+  [['delete','remove','cancel','void'], 1, -1],
+  [['create','new','add','generate','build'], 1, 1],
+  [['denied','rejected','refused','invalid','false','failed'], 2, -1],
+  [['confirmed','approved','verified','valid','true','success'], 2, 1],
+  [['required','mandatory','must','critical','essential'], 4, 1],
+  [['private','confidential','secret','internal'], 5, -1],
+  [['public','open','published','shared'], 5, 1],
+  [['received','incoming','inbound','import'], 7, -1],
+  [['sent','outgoing','outbound','export'], 7, 1],
+  [['external','vendor','supplier','client','customer'], 20, -1],
+  [['internal','our','company','organization'], 20, 1],
+  [['critical','urgent','emergency','asap','immediate'], 25, 1],
+  [['deferred','low priority','backlog'], 25, -1],
+  [['technical','engineering','code','system','server','valve','pressure','motor'], 35, -1],
+  [['business','financial','invoice','payment','revenue','budget','cost','expense'], 35, 1],
+  [['expense','cost','payment','outflow','debit'], 37, -1],
+  [['income','revenue','receipt','inflow','credit'], 37, 1],
+  [['loss','deficit','negative','decrease','reduction','reduced'], 38, -1],
+  [['profit','surplus','positive','increase','growth','improved'], 38, 1],
+  [['small','minor','tiny'], 39, -1],
+  [['large','major','significant','massive'], 39, 1],
+  [['failed','error','broken','incomplete'], 41, -1],
+  [['complete','done','finished','resolved'], 41, 1],
+  [['historical','archive','legacy'], 50, -1],
+  [['forecast','prediction','estimate','projection','budget'], 50, 1],
+  [['decreasing','declining','falling','dropping','reduced'], 73, -1],
+  [['increasing','rising','growing','climbing','improved'], 73, 1],
+  [['law','legal','court','statute','regulation','bill','act'], 22, -1],
+  [['medical','patient','diagnosis','treatment','health','clinical'], 33, 1],
+  [['approved','approval','cleared','authorized'], 26, 1],
+  [['maintenance','cleaning','repair','service','preventive'], 34, 1],
+  [['quarterly','annual','monthly','periodic'], 34, 1],
+];
+
+// Presets
+const PRESETS = {
+  power: [
+    "Pressure drop across valve V-201 reduced 15% after scheduled cleaning",
+    "Boiler efficiency at 92.3%, trending upward after tube replacement",
+    "Safety valve PSV-104 requires annual certification, due next quarter",
+  ],
+  finance: [
+    "Invoice #4471 from Acme Corp: $2,340 payment approved, due April 15",
+    "Quarterly maintenance budget allocation: $12,000, 60% utilized",
+    "Cost per valve cleaning averages $450, trending down year-over-year",
+  ],
+  legal: [
+    "Bill C-92 paramountcy argument applicable to federal jurisdiction cases",
+    "Court-ordered contact schedule documented for affidavit submission",
+    "Legal counsel specializing in First Nations child and family legislation required",
+  ],
+  technical: [
+    "Server cluster memory utilization at 78%, auto-scaling threshold set at 85%",
+    "Database migration from PostgreSQL 14 to 16 completed, zero downtime",
+    "API latency reduced 40% after implementing edge caching layer",
+  ],
+  medical: [
+    "Patient blood pressure 138/88, elevated, monitoring recommended",
+    "Quarterly lab results show improved cholesterol levels after medication change",
+    "Follow-up appointment scheduled for cardiac assessment in 6 weeks",
+  ]
+};
+
+// ── Encoding ──
+function encodeText(text) {
+  const trits = new Array(N_DIMS).fill(0);
+  const lower = text.toLowerCase();
+  
+  // Keyword-driven activation
+  for (const [keywords, dimIdx, value] of KEYWORD_MAP) {
+    if (keywords.some(kw => lower.includes(kw))) {
+      trits[dimIdx] = value;
+    }
+  }
+  
+  // Hash-driven fill for remaining dimensions
+  let hash = 0;
+  for (let i = 0; i < text.length; i++) {
+    hash = ((hash << 5) - hash + text.charCodeAt(i)) | 0;
+  }
+  for (let i = 0; i < N_DIMS; i++) {
+    if (trits[i] === 0) {
+      const h = Math.abs((hash * (i + 1) * 2654435761) | 0) % 3;
+      trits[i] = h - 1; // {0,1,2} → {-1,0,1}
+    }
+  }
+  
+  return trits;
+}
+
+function tritsToUUID(trits) {
+  // Simplified UUID v8 display (deterministic from trits)
+  let hex = '';
+  for (let i = 0; i < N_DIMS; i += 4) {
+    let val = 0;
+    for (let j = 0; j < 4 && i+j < N_DIMS; j++) {
+      val = val * 3 + (trits[i+j] + 1);
+    }
+    hex += val.toString(16);
+  }
+  hex = hex.padEnd(32, '0').slice(0, 32);
+  // Set version 8 and variant
+  hex = hex.slice(0,12) + '8' + hex.slice(13,16) + 'a' + hex.slice(17);
+  return hex.replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, '$1-$2-$3-$4-$5');
+}
+
+// ── Brain state composition ──
+function recomposeBrain() {
+  brainState = new Array(N_DIMS).fill(0);
+  
+  // Sum all block trits (commutative — order doesn't matter)
+  for (const block of blocks) {
+    for (let i = 0; i < N_DIMS; i++) {
+      brainState[i] += block.trits[i];
+    }
+  }
+  
+  // Ternary sign: collapse to {-1, 0, +1}
+  for (let i = 0; i < N_DIMS; i++) {
+    brainState[i] = Math.sign(brainState[i]);
+  }
+  
+  updateVisualization();
+}
+
+// ── Visualization ──
+function updateVisualization() {
+  const grid = document.getElementById('trit-grid');
+  grid.innerHTML = '';
+  
+  let posCount = 0, negCount = 0, zeroCount = 0;
+  
+  for (let i = 0; i < N_DIMS; i++) {
+    const cell = document.createElement('div');
+    const val = brainState[i];
+    
+    if (val > 0) { cell.className = 'trit-cell pos'; posCount++; }
+    else if (val < 0) { cell.className = 'trit-cell neg'; negCount++; }
+    else { cell.className = 'trit-cell zero'; zeroCount++; }
+    
+    const tooltip = document.createElement('div');
+    tooltip.className = 'tooltip';
+    const label = val === 1 ? TRIT_LABELS['1'][i] : val === -1 ? TRIT_LABELS['-1'][i] : 'neutral';
+    tooltip.textContent = `d${i+1}: ${AXES[i]} = ${label}`;
+    cell.appendChild(tooltip);
+    
+    grid.appendChild(cell);
+  }
+  
+  document.getElementById('pos-count').textContent = posCount;
+  document.getElementById('neg-count').textContent = negCount;
+  document.getElementById('zero-count').textContent = zeroCount;
+  
+  // Metrics
+  const n = blocks.length;
+  const K = n > 0 ? Math.pow(2, n) - 1 : 0;
+  const E = n * E_UUID;
+  const eta = E > 0 ? (K / E).toFixed(1) : '—';
+  
+  document.getElementById('k-value').textContent = K > 999999 ? K.toExponential(1) : K.toLocaleString();
+  document.getElementById('e-value').textContent = E.toFixed(3);
+  document.getElementById('eta-value').textContent = eta;
+  
+  document.getElementById('block-counter').textContent = `(${n}/${MAX_BLOCKS})`;
+  document.getElementById('add-btn').disabled = n >= MAX_BLOCKS;
+  
+  // Relationships
+  updateRelationships();
+}
+
+function updateRelationships() {
+  const el = document.getElementById('relationships');
+  const n = blocks.length;
+  
+  if (n === 0) {
+    el.innerHTML = 'Add knowledge blocks to see emergent relationships form.<br>Order does not matter — only connection.';
+    return;
+  }
+  
+  const pairs = n * (n - 1) / 2;
+  const triples = n >= 3 ? n * (n-1) * (n-2) / 6 : 0;
+  const total = Math.pow(2, n) - 1;
+  
+  let html = `<div style="font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; line-height: 1.8;">`;
+  html += `<span style="color: var(--positive);">${n}</span> individual knowledge units<br>`;
+  if (pairs > 0) html += `<span style="color: var(--positive);">${pairs}</span> pairwise relationships<br>`;
+  if (triples > 0) html += `<span style="color: var(--positive);">${triples}</span> three-way patterns<br>`;
+  if (n >= 4) html += `<span style="color: var(--positive);">...</span> higher-order emergent structures<br>`;
+  html += `<br><span style="color: var(--accent); font-weight: 700;">${total.toLocaleString()}</span> total knowledge units from <span style="color: var(--negative);">${(n * 16)} bytes</span>`;
+  html += `<br><br><span style="opacity: 0.5;">Commutative: rearrange blocks — brain state unchanged</span>`;
+  html += `</div>`;
+  
+  el.innerHTML = html;
+}
+
+// ── Block management ──
+function addBlock(text) {
+  if (blocks.length >= MAX_BLOCKS) return;
+  
+  text = text || document.getElementById('input-text').value.trim();
+  if (!text) return;
+  
+  const trits = encodeText(text);
+  const uid = tritsToUUID(trits);
+  
+  blocks.push({ text, trits, uuid: uid, id: Date.now() });
+  
+  document.getElementById('input-text').value = '';
+  
+  recomposeBrain();
+  renderBlockList();
+}
+
+function removeBlock(id) {
+  blocks = blocks.filter(b => b.id !== id);
+  recomposeBrain();
+  renderBlockList();
+}
+
+function resetBrain() {
+  blocks = [];
+  recomposeBrain();
+  renderBlockList();
+}
+
+function renderBlockList() {
+  const list = document.getElementById('block-list');
+  list.innerHTML = '';
+  
+  blocks.forEach((block, idx) => {
+    const card = document.createElement('div');
+    card.className = 'block-card';
+    
+    let tritHtml = '';
+    for (const t of block.trits) {
+      if (t === 1) tritHtml += '<span class="t-pos">+</span>';
+      else if (t === -1) tritHtml += '<span class="t-neg">−</span>';
+      else tritHtml += '·';
+    }
+    
+    card.innerHTML = `
+      <div class="block-header">
+        <span class="block-number">Block ${idx + 1}</span>
+        <button class="btn btn-remove" onclick="removeBlock(${block.id})">✕ Remove</button>
+      </div>
+      <div class="block-text">${block.text}</div>
+      <div class="block-uuid">${block.uuid}</div>
+      <div class="block-trits">${tritHtml}</div>
+    `;
+    
+    list.appendChild(card);
+  });
+}
+
+function addPreset(category) {
+  const items = PRESETS[category];
+  if (!items) return;
+  
+  for (const item of items) {
+    if (blocks.length >= MAX_BLOCKS) break;
+    addBlock(item);
+  }
+}
+
+// ── Initialize ──
+updateVisualization();
+</script>
+</body>
+</html>
