@@ -52,7 +52,7 @@ The system is maximally expansive in knowledge, maximally conservative in energy
 ## Quick Start
 
 ```bash
-git clone https://github.com/DennisEvanHay/tsuuid-framework.git
+git clone https://github.com/dennishay/tsuuid-framework.git
 cd tsuuid-framework
 pip install -e .
 ```

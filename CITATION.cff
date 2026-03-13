@@ -9,8 +9,8 @@ authors:
 version: "0.1.0"
 date-released: "2026-03-12"
 license: MIT
-url: "https://github.com/DennisEvanHay/tsuuid-framework"
-repository-code: "https://github.com/DennisEvanHay/tsuuid-framework"
+url: "https://github.com/dennishay/tsuuid-framework"
+repository-code: "https://github.com/dennishay/tsuuid-framework"
 keywords:
   - ternary quantization
   - semantic addressing
