@@ -74,7 +74,8 @@ class SemanticCodec:
         """
         self.dims = SemanticDimensions()
         self.backend = backend
-        
+        self._bitnet_encoder = None  # Lazy initialization
+
         # Keyword → dimension mappings for the hash-based encoder
         # This is a simplified demonstration; the BitNet backend learns these
         self._keyword_map = self._build_keyword_map()
@@ -92,11 +93,10 @@ class SemanticCodec:
         if self.backend == "hash":
             trits = self._hash_encode(content, metadata)
         elif self.backend == "bitnet":
-            raise NotImplementedError(
-                "BitNet backend not yet implemented. "
-                "This is where YOUR contribution goes. "
-                "See CONTRIBUTING.md and issue #1."
-            )
+            if self._bitnet_encoder is None:
+                from tsuuid.bitnet_backend import BitNetEncoder
+                self._bitnet_encoder = BitNetEncoder()
+            trits = self._bitnet_encoder.encode(content, metadata)
         else:
             raise ValueError(f"Unknown backend: {self.backend}")
         

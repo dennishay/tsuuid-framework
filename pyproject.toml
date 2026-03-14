@@ -30,16 +30,16 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-bitnet = ["huggingface-hub", "transformers"]
+bitnet = ["sentence-transformers>=2.2", "torch>=2.0"]
 databases = ["sqlalchemy>=2.0", "psycopg2-binary", "pymysql"]
 dev = ["pytest>=7.0", "pytest-cov", "ruff", "mypy"]
 all = ["tsuuid[bitnet,databases,dev]"]
 
 [project.urls]
-Homepage = "https://github.com/DennisEvanHay/tsuuid-framework"
-Documentation = "https://github.com/DennisEvanHay/tsuuid-framework/tree/main/docs"
-Repository = "https://github.com/DennisEvanHay/tsuuid-framework"
-Issues = "https://github.com/DennisEvanHay/tsuuid-framework/issues"
+Homepage = "https://github.com/dennishay/tsuuid-framework"
+Documentation = "https://github.com/dennishay/tsuuid-framework/tree/main/docs"
+Repository = "https://github.com/dennishay/tsuuid-framework"
+Issues = "https://github.com/dennishay/tsuuid-framework/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
