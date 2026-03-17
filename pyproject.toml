@@ -30,10 +30,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-bitnet = ["sentence-transformers>=2.2", "torch>=2.0"]
+bitnet = ["sentence-transformers>=2.2"]
+causal = ["transformers>=4.30", "torch>=2.0"]
 databases = ["sqlalchemy>=2.0", "psycopg2-binary", "pymysql"]
 dev = ["pytest>=7.0", "pytest-cov", "ruff", "mypy"]
-all = ["tsuuid[bitnet,databases,dev]"]
+all = ["tsuuid[bitnet,causal,databases,dev]"]
 
 [project.urls]
 Homepage = "https://github.com/dennishay/tsuuid-framework"
