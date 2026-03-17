@@ -74,6 +74,21 @@ class TestBitNetEncoder:
         if t_neg[46] != 0 and t_pos[46] != 0:
             assert t_neg[46] != t_pos[46]
 
+    def test_model_info(self, encoder):
+        """Encoder should expose model metadata."""
+        info = encoder.model_info()
+        assert "model_name" in info
+        assert "embedding_dim" in info
+        assert "device" in info
+        assert info["embedding_dim"] == 384  # MiniLM default
+
+    def test_from_config(self):
+        """Factory method should create encoder from config dict."""
+        config = {"model_name": "sentence-transformers/all-MiniLM-L6-v2", "device": "cpu"}
+        enc = BitNetEncoder.from_config(config)
+        trits = enc.encode("test")
+        assert trits.shape == (N_DIMS,)
+
 
 class TestBitNetCodecIntegration:
     """Integration tests: BitNet backend through SemanticCodec."""
@@ -98,6 +113,15 @@ class TestBitNetCodecIntegration:
         u2 = codec.encode("technical server error")
         d = codec.distance(u1, u2)
         assert d > 0
+
+    def test_codec_with_model_config(self):
+        """Codec should pass model config to BitNet backend."""
+        codec = SemanticCodec(
+            backend="bitnet",
+            model_config={"model_name": "sentence-transformers/all-MiniLM-L6-v2", "device": "cpu"},
+        )
+        uid = codec.encode("test document")
+        assert uid.version == 8
 
     def test_composition_with_bitnet(self):
         from tsuuid.compose import compose_uuids

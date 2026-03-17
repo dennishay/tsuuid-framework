@@ -64,17 +64,23 @@ class SemanticCodec:
         distance = codec.distance(uid, uid2)
     """
     
-    def __init__(self, backend: str = "hash"):
+    def __init__(self, backend: str = "hash", model_config: Optional[Dict] = None):
         """Initialize codec.
-        
+
         Args:
             backend: Encoding backend.
                 "hash" — deterministic hash-based (reference implementation)
                 "bitnet" — BitNet b1.58 model (requires bitnet dependency)
+                "causal" — Causal LM with mean-pooled hidden states
+            model_config: Optional config dict passed to the backend encoder.
+                For bitnet: {"model_name": "...", "device": "cpu|mps|cuda"}
+                For causal: {"model_name": "...", "device": "..."}
         """
         self.dims = SemanticDimensions()
         self.backend = backend
+        self._model_config = model_config or {}
         self._bitnet_encoder = None  # Lazy initialization
+        self._causal_encoder = None  # Lazy initialization
 
         # Keyword → dimension mappings for the hash-based encoder
         # This is a simplified demonstration; the BitNet backend learns these
@@ -95,8 +101,13 @@ class SemanticCodec:
         elif self.backend == "bitnet":
             if self._bitnet_encoder is None:
                 from tsuuid.bitnet_backend import BitNetEncoder
-                self._bitnet_encoder = BitNetEncoder()
+                self._bitnet_encoder = BitNetEncoder.from_config(self._model_config)
             trits = self._bitnet_encoder.encode(content, metadata)
+        elif self.backend == "causal":
+            if self._causal_encoder is None:
+                from tsuuid.causal_encoder import CausalLMEncoder
+                self._causal_encoder = CausalLMEncoder.from_config(self._model_config)
+            trits = self._causal_encoder.encode(content, metadata)
         else:
             raise ValueError(f"Unknown backend: {self.backend}")
         

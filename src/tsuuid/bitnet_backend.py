@@ -155,6 +155,30 @@ class BitNetEncoder:
 
         return trits
 
+    def model_info(self) -> dict:
+        """Return metadata about the loaded model."""
+        self._ensure_loaded()
+        return {
+            "model_name": self._model_name,
+            "embedding_dim": self._model.get_sentence_embedding_dimension(),
+            "device": str(self._model.device),
+            "projection_shape": self._projection_matrix.shape,
+            "cache_fingerprint": self._fingerprint(),
+        }
+
+    @classmethod
+    def from_config(cls, config: dict) -> "BitNetEncoder":
+        """Create encoder from a config dictionary.
+
+        Args:
+            config: Dict with optional keys: model_name (str), device (str).
+                    If model_name is omitted, uses DEFAULT_MODEL.
+        """
+        return cls(
+            model_name=config.get("model_name"),
+            device=config.get("device"),
+        )
+
     def _quantize_absmean(self, values: np.ndarray) -> np.ndarray:
         """BitNet b1.58 absmean ternary quantization.
 
