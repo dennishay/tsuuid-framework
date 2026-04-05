@@ -46,6 +46,8 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
+from tsuuid.delta import DeltaEncoder, SparseDelta, compression_ratio
+
 DB_PATH = os.path.expanduser("~/.claude/claude_home.db")
 
 
@@ -197,6 +199,181 @@ class Encoder768:
             "bytes_per_doc": 1536,
             "format": "float16 (768 dims × 2 bytes)",
         }
+
+    # ── Delta Updates ─────────────────────────────────────
+
+    def _ensure_delta_schema(self, conn: sqlite3.Connection):
+        """Create delta tables and columns if they don't exist."""
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS tsuuid_768_deltas (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                path TEXT NOT NULL,
+                version INTEGER NOT NULL,
+                delta BLOB NOT NULL,
+                delta_b64 TEXT,
+                residual BLOB,
+                applied_at TEXT NOT NULL,
+                UNIQUE(path, version)
+            )
+        """)
+        try:
+            conn.execute("ALTER TABLE tsuuid_768 ADD COLUMN version INTEGER DEFAULT 1")
+        except sqlite3.OperationalError:
+            pass  # column already exists
+
+    def _get_delta_encoder(self) -> DeltaEncoder:
+        """Lazy-init delta encoder."""
+        if not hasattr(self, "_delta_encoder"):
+            self._delta_encoder = DeltaEncoder()
+        return self._delta_encoder
+
+    def _load_residual(self, conn: sqlite3.Connection, path: str):
+        """Load persisted residual into the delta encoder."""
+        enc = self._get_delta_encoder()
+        row = conn.execute(
+            "SELECT residual FROM tsuuid_768_deltas WHERE path = ? ORDER BY version DESC LIMIT 1",
+            (path,),
+        ).fetchone()
+        if row and row[0]:
+            enc.set_residual(path, np.frombuffer(row[0], dtype=np.float32).copy())
+
+    def update(self, path: str, new_vec: np.ndarray,
+               title: Optional[str] = None, epsilon: float = 0.001) -> SparseDelta:
+        """Compute delta vs stored vector, update storage, return sparse delta.
+
+        If no stored vector exists, stores as checkpoint (full vector).
+        Maintains residual accumulator in tsuuid_768_deltas table.
+        Returns SparseDelta suitable for transmission to remotes.
+        """
+        conn = sqlite3.connect(DB_PATH)
+        self._ensure_delta_schema(conn)
+
+        # Get current stored vector and version
+        row = conn.execute(
+            "SELECT vec, version, title FROM tsuuid_768 WHERE path = ?", (path,)
+        ).fetchone()
+
+        enc = self._get_delta_encoder()
+
+        if row is None:
+            # No prior vector — store as checkpoint
+            version = 1
+            sparse = enc.make_checkpoint(new_vec, version=version)
+            self.store(path, title or path, new_vec)
+            # Set version
+            conn.execute("UPDATE tsuuid_768 SET version = ? WHERE path = ?", (version, path))
+        else:
+            old_vec = f16_bytes_to_vec(row[0])
+            old_version = row[1] or 1
+            version = old_version + 1
+
+            # Load persisted residual
+            self._load_residual(conn, path)
+
+            # Compute and sparsify delta
+            enc._epsilon = epsilon
+            delta = enc.compute_delta(old_vec, new_vec)
+            sparse = enc.sparsify(delta, doc_id=path, version=version)
+
+            # Update main table
+            self.store(path, title or row[2] or path, new_vec)
+            conn.execute("UPDATE tsuuid_768 SET version = ? WHERE path = ?", (version, path))
+
+        # Record delta in history
+        residual = enc.get_residual(path)
+        residual_blob = residual.tobytes() if residual is not None else None
+        conn.execute(
+            "INSERT OR REPLACE INTO tsuuid_768_deltas (path, version, delta, delta_b64, residual, applied_at) VALUES (?, ?, ?, ?, ?, ?)",
+            (path, version, sparse.to_bytes(), sparse.to_b64(), residual_blob,
+             time.strftime("%Y-%m-%dT%H:%M:%S")),
+        )
+        conn.commit()
+        conn.close()
+        return sparse
+
+    def apply_remote_delta(self, path: str, sparse_delta: SparseDelta) -> np.ndarray:
+        """Receive and apply a delta from a remote sender.
+
+        Loads current stored vector, applies delta, stores result.
+        Records the delta in history table. Returns the reconstructed vector.
+        """
+        conn = sqlite3.connect(DB_PATH)
+        self._ensure_delta_schema(conn)
+        enc = self._get_delta_encoder()
+
+        row = conn.execute(
+            "SELECT vec, version, title FROM tsuuid_768 WHERE path = ?", (path,)
+        ).fetchone()
+
+        if row is None and not sparse_delta.is_checkpoint:
+            conn.close()
+            raise ValueError(f"No stored vector for {path!r} — need checkpoint first")
+
+        if sparse_delta.is_checkpoint:
+            new_vec = enc.apply_delta(np.zeros(768, dtype=np.float32), sparse_delta)
+        else:
+            old_vec = f16_bytes_to_vec(row[0])
+            new_vec = enc.apply_delta(old_vec, sparse_delta)
+
+        version = sparse_delta.version
+        title = row[2] if row else path
+        self.store(path, title, new_vec)
+        conn.execute("UPDATE tsuuid_768 SET version = ? WHERE path = ?", (version, path))
+
+        conn.execute(
+            "INSERT OR REPLACE INTO tsuuid_768_deltas (path, version, delta, delta_b64, applied_at) VALUES (?, ?, ?, ?, ?)",
+            (path, version, sparse_delta.to_bytes(), sparse_delta.to_b64(),
+             time.strftime("%Y-%m-%dT%H:%M:%S")),
+        )
+        conn.commit()
+        conn.close()
+        return new_vec
+
+    def checkpoint(self, path: str) -> SparseDelta:
+        """Force full vector sync. Returns checkpoint SparseDelta.
+
+        Resets residual accumulator. Use periodically or when residual
+        norm exceeds threshold.
+        """
+        conn = sqlite3.connect(DB_PATH)
+        self._ensure_delta_schema(conn)
+
+        row = conn.execute(
+            "SELECT vec, version FROM tsuuid_768 WHERE path = ?", (path,)
+        ).fetchone()
+        if row is None:
+            conn.close()
+            raise ValueError(f"No stored vector for {path!r}")
+
+        vec = f16_bytes_to_vec(row[0])
+        version = (row[1] or 1) + 1
+        enc = self._get_delta_encoder()
+        sparse = enc.make_checkpoint(vec, version=version)
+        enc.reset_residual(path)
+
+        conn.execute("UPDATE tsuuid_768 SET version = ? WHERE path = ?", (version, path))
+        conn.execute(
+            "INSERT OR REPLACE INTO tsuuid_768_deltas (path, version, delta, delta_b64, residual, applied_at) VALUES (?, ?, ?, ?, NULL, ?)",
+            (path, version, sparse.to_bytes(), sparse.to_b64(),
+             time.strftime("%Y-%m-%dT%H:%M:%S")),
+        )
+        conn.commit()
+        conn.close()
+        return sparse
+
+    def delta_history(self, path: str, limit: int = 20) -> List[dict]:
+        """Return delta history for a document path."""
+        conn = sqlite3.connect(DB_PATH)
+        self._ensure_delta_schema(conn)
+        rows = conn.execute(
+            "SELECT version, length(delta), applied_at FROM tsuuid_768_deltas WHERE path = ? ORDER BY version DESC LIMIT ?",
+            (path, limit),
+        ).fetchall()
+        conn.close()
+        return [
+            {"version": v, "delta_bytes": d, "applied_at": a}
+            for v, d, a in rows
+        ]
 
 
 # ── CLI ────────────────────────────────────────────────
