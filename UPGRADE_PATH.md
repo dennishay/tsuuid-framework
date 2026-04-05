@@ -93,6 +93,97 @@ codec = SemanticCodec(
 )
 ```
 
+### Phase 8: Delta Encoding for Efficient Vector Updates (NEW)
+**Status: Active**
+
+Full 768-dim vectors are 3,072 bytes. When a document changes slightly,
+most dimensions stay the same. Delta encoding sends only what changed:
+
+- **SparseDelta format**: 4 bytes per changed dimension + 8 byte header
+- **Typical savings**: 5-15x for minor edits (50-150 dims change)
+- **Error feedback**: Residual accumulator prevents float16 quantization drift
+- **Periodic checkpoints**: Full vector sync resets error accumulation
+- **Auto-checkpoint**: When >700 dims change, promotes to full vector (no negative compression)
+
+Usage:
+```python
+from tsuuid.delta import DeltaEncoder, SparseDelta
+from tsuuid.labse_768 import Encoder768
+
+# Standalone delta math
+enc = DeltaEncoder(epsilon=0.001)
+delta = enc.compute_delta(old_vec, new_vec)
+sparse = enc.sparsify(delta, doc_id="doc-001")
+print(f"Sent {sparse.wire_size} bytes instead of 3072")
+
+# With storage integration
+enc768 = Encoder768()
+sparse = enc768.update("path/to/doc.md", new_vec)
+enc768.checkpoint("path/to/doc.md")  # periodic full sync
+```
+
+Origin: SVN concept (Claude conversation 187ea329, Nov 2025) +
+LaBSE note 2BED (Jan 2026). Federated learning error feedback
+technique (Top-K sparsification with residual accumulation).
+
+### Phase 9: Semantic Decoding — Meaning Extraction from 768 Vectors (CONCEPTUAL)
+**Status: Future — depends on Phase 8 (delta encoding)**
+
+768 vectors are currently one-way: documents go in, vectors come out, similarity
+search happens. But if the entire corpus lives as 768 vectors, we need a path to
+**extract meaning back out** — not reconstruct original text, but generate derived
+content from the compressed representations.
+
+**The problem:**
+Vectors encode meaning but can't express it. To answer "what is this document about?"
+you currently need the original document. The 768 floats know the answer — there's
+just no decoder to produce it.
+
+**Use cases:**
+- Vector → natural language summary ("what is this document about?")
+- Vector cluster → relational insight ("what do these documents have in common?")
+- Vector + query → answer generation (answer from vector space, not re-reading source)
+- Vector diff → change narrative ("what changed between v1 and v2?")
+
+**Architecture direction:**
+Small causal decoder conditioned on 768 representations. Not a full autoregressive
+LLM — a lightweight generator that takes dense vectors as input context instead of
+raw token sequences. Encoder-decoder hybrid where LaBSE is the encoder half and a
+small trained decoder is the generation half.
+
+```
+Current:   document → LaBSE → 768 floats → similarity search (dead end)
+Phase 9:   document → LaBSE → 768 floats → small decoder → generated text
+                                    ↑
+                          stored vectors (no re-read needed)
+```
+
+**Why not just re-read the original?**
+On local/mobile (8GB Mac Mini, Apple Watch), re-processing full documents is
+expensive. The 768 vectors already contain the meaning — extracting from them is
+O(1) vector lookup + small decode vs O(n) full document re-encoding. With 2300+
+documents in the knowledge base, this is the difference between milliseconds and
+minutes.
+
+**Research pointers:**
+- Funnel Transformer (compress input, generate from compressed)
+- LongT5 (transient global attention for long-document encoding)
+- YOCO — You Only Cache Once (split encoder/decoder caching)
+- Encoder-decoder architectures generally (T5, BART, mBART)
+- Retrieval-augmented generation with dense retrieval (but using stored vectors
+  as the actual generation context, not just for retrieval)
+
+**What this is NOT:**
+- Not RAG (we're not retrieving documents — we're generating FROM the vector itself)
+- Not vector-to-text reconstruction (lossy compression means you can't get the
+  original back — and you don't need to)
+- Not prompt engineering (this is an architectural change, not a wrapper)
+
+**Origin:** Claude conversation on LLM architecture vs LaBSE encoding (2026-04-05).
+Observation that decoder-only architectures waste compute re-reading prompts that
+an encoder could compress once. For local/mobile, the efficiency argument dominates
+the scaling argument.
+
 ## Monitoring the Ecosystem
 
 Watch for:
