@@ -73,10 +73,14 @@ class SemanticCodec:
                 "bitnet" — BitNet b1.58 model (requires bitnet dependency)
                 "causal" — Causal LM with mean-pooled hidden states
                 "labse" — Google LaBSE multilingual (109 languages, ~768-dim)
+                "llm" — LLM comprehension-based (smartest model reads document)
+                "gold" — Multi-LLM gold standard (council of top-tier models)
             model_config: Optional config dict passed to the backend encoder.
                 For bitnet: {"model_name": "...", "device": "cpu|mps|cuda"}
                 For causal: {"model_name": "...", "device": "..."}
                 For labse: {"model_name": "...", "device": "..."}
+                For llm: {"model_name": "gemma4:e2b", "provider": "ollama|claude", "multi_pass": true}
+                For gold: (auto-configures from available providers)
         """
         self.dims = SemanticDimensions()
         self.backend = backend
@@ -84,6 +88,8 @@ class SemanticCodec:
         self._bitnet_encoder = None  # Lazy initialization
         self._causal_encoder = None  # Lazy initialization
         self._labse_encoder = None   # Lazy initialization
+        self._llm_encoder = None     # Lazy initialization
+        self._gold_encoder = None    # Lazy initialization
 
         # Keyword → dimension mappings for the hash-based encoder
         # This is a simplified demonstration; the BitNet backend learns these
@@ -116,6 +122,16 @@ class SemanticCodec:
                 from tsuuid.labse_backend import LaBSEEncoder
                 self._labse_encoder = LaBSEEncoder.from_config(self._model_config)
             trits = self._labse_encoder.encode(content, metadata)
+        elif self.backend == "llm":
+            if self._llm_encoder is None:
+                from tsuuid.llm_encoder import LLMEncoder
+                self._llm_encoder = LLMEncoder.from_config(self._model_config)
+            trits = self._llm_encoder.encode(content, metadata)
+        elif self.backend == "gold":
+            if self._gold_encoder is None:
+                from tsuuid.gold_standard import GoldStandardEncoder
+                self._gold_encoder = GoldStandardEncoder()
+            trits = self._gold_encoder.encode(content, metadata)
         else:
             raise ValueError(f"Unknown backend: {self.backend}")
         
