@@ -33,6 +33,9 @@ CLI:
     python3 -m tsuuid.labse_768 search "query text"
     python3 -m tsuuid.labse_768 compare "text A" "text B"
     python3 -m tsuuid.labse_768 stats
+    python3 -m tsuuid.labse_768 update <path> <new text>
+    python3 -m tsuuid.labse_768 checkpoint <path>
+    python3 -m tsuuid.labse_768 delta-history <path>
 """
 
 import base64
@@ -434,6 +437,37 @@ def main():
             print("Recent:")
             for t, d in s['recent']:
                 print(f"  {d}  {t}")
+
+    elif cmd == "update" and len(sys.argv) >= 4:
+        path = sys.argv[2]
+        text = " ".join(sys.argv[3:])
+        new_vec = enc.encode(text)
+        sparse = enc.update(path, new_vec)
+        ratio = compression_ratio(sparse)
+        kind = "checkpoint" if sparse.is_checkpoint else "delta"
+        print(f"Type:        {kind}")
+        print(f"Version:     {sparse.version}")
+        print(f"Changed:     {sparse.n_changed}/768 dims")
+        print(f"Wire size:   {sparse.wire_size} bytes (vs 3072 full)")
+        print(f"Compression: {ratio:.1f}x")
+        print(f"B64:         {sparse.to_b64()[:60]}...")
+
+    elif cmd == "checkpoint" and len(sys.argv) >= 3:
+        path = sys.argv[2]
+        sparse = enc.checkpoint(path)
+        print(f"Checkpoint:  v{sparse.version}")
+        print(f"Wire size:   {sparse.wire_size} bytes")
+        print(f"Residual:    reset")
+
+    elif cmd == "delta-history" and len(sys.argv) >= 3:
+        path = sys.argv[2]
+        hist = enc.delta_history(path)
+        if not hist:
+            print(f"No delta history for {path}")
+        else:
+            print(f"Delta history for {path}:")
+            for h in hist:
+                print(f"  v{h['version']:>3}  {h['delta_bytes']:>6} bytes  {h['applied_at']}")
 
     else:
         print(__doc__)
