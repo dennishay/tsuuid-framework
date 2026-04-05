@@ -172,6 +172,38 @@ tsuuid-framework/
     └── architecture_diagram.svg
 ```
 
+## Delta Encoding
+
+When a document's embedding changes, send only the delta instead of the full 3,072-byte vector:
+
+```python
+from tsuuid.delta import DeltaEncoder, SparseDelta, compression_ratio
+
+enc = DeltaEncoder(epsilon=0.001)
+
+# Document changed — compute what's different
+delta = enc.compute_delta(old_vec, new_vec)
+sparse = enc.sparsify(delta, doc_id="doc-001", version=2)
+
+# Transmit only what changed
+print(f"{sparse.wire_size} bytes vs 3072")  # e.g. "164 bytes vs 3072" (18.7x)
+
+# Receiver reconstructs
+reconstructed = enc.apply_delta(stored_vec, sparse)
+
+# Periodic checkpoint resets accumulated error
+checkpoint = enc.make_checkpoint(current_vec, version=10)
+```
+
+| Edit Type | Dims Changed | Wire Size | Compression |
+|-----------|-------------|-----------|-------------|
+| Typo fix  | ~50         | ~200 B    | 15x         |
+| Paragraph | ~300        | ~1,200 B  | 2.5x        |
+| Rewrite   | ~768        | ~3,080 B  | checkpoint  |
+
+Error feedback (residual accumulation from federated learning) prevents drift.
+See `src/examples/11_delta_encoding.py` for a full demo.
+
 ## The Papers
 
 | Document | Description |

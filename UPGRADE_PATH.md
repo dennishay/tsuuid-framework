@@ -93,6 +93,39 @@ codec = SemanticCodec(
 )
 ```
 
+### Phase 8: Delta Encoding for Efficient Vector Updates (NEW)
+**Status: Active**
+
+Full 768-dim vectors are 3,072 bytes. When a document changes slightly,
+most dimensions stay the same. Delta encoding sends only what changed:
+
+- **SparseDelta format**: 4 bytes per changed dimension + 8 byte header
+- **Typical savings**: 5-15x for minor edits (50-150 dims change)
+- **Error feedback**: Residual accumulator prevents float16 quantization drift
+- **Periodic checkpoints**: Full vector sync resets error accumulation
+- **Auto-checkpoint**: When >700 dims change, promotes to full vector (no negative compression)
+
+Usage:
+```python
+from tsuuid.delta import DeltaEncoder, SparseDelta
+from tsuuid.labse_768 import Encoder768
+
+# Standalone delta math
+enc = DeltaEncoder(epsilon=0.001)
+delta = enc.compute_delta(old_vec, new_vec)
+sparse = enc.sparsify(delta, doc_id="doc-001")
+print(f"Sent {sparse.wire_size} bytes instead of 3072")
+
+# With storage integration
+enc768 = Encoder768()
+sparse = enc768.update("path/to/doc.md", new_vec)
+enc768.checkpoint("path/to/doc.md")  # periodic full sync
+```
+
+Origin: SVN concept (Claude conversation 187ea329, Nov 2025) +
+LaBSE note 2BED (Jan 2026). Federated learning error feedback
+technique (Top-K sparsification with residual accumulation).
+
 ## Monitoring the Ecosystem
 
 Watch for:
