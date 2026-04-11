@@ -8,6 +8,8 @@ public final class LaBSEEncoder: @unchecked Sendable {
     private var model: MLModel?
     private var projectionMatrix: [[Float]]?
 
+    public init() {}
+
     public var isLoaded: Bool { model != nil }
 
     public func load(modelURL: URL) async throws {

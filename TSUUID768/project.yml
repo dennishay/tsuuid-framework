@@ -1,0 +1,29 @@
+name: TSUUID768
+options:
+  bundleIdPrefix: com.tsuuid
+  deploymentTarget:
+    iOS: "17.0"
+  xcodeVersion: "16.0"
+  groupSortPosition: top
+packages:
+  TSUUIDKit:
+    path: ../TSUUIDKit
+targets:
+  TSUUID768:
+    type: application
+    platform: iOS
+    sources: [TSUUID768]
+    dependencies:
+      - package: TSUUIDKit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.tsuuid.768
+        GENERATE_INFOPLIST_FILE: true
+        INFOPLIST_KEY_UILaunchScreen_Generation: true
+        INFOPLIST_KEY_CFBundleDisplayName: "768"
+        SWIFT_STRICT_CONCURRENCY: complete
+    entitlements:
+      path: TSUUID768/TSUUID768.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.tsuuid.768

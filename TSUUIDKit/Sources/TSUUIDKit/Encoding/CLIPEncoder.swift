@@ -8,6 +8,8 @@ import CoreImage
 public final class CLIPEncoder: @unchecked Sendable {
     private var model: MLModel?
 
+    public init() {}
+
     public var isLoaded: Bool { model != nil }
 
     public func load(modelURL: URL) async throws {
