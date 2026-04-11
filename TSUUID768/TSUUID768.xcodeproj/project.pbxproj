@@ -10,10 +10,14 @@
 		0B4B80F28FAF53B26C62F22D /* SyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B53AFC4E701389F79620495D /* SyncService.swift */; };
 		1AC76F2FBF84AF18FC65F109 /* ChainsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD4586EF7FCB4326C6FB99AA /* ChainsTab.swift */; };
 		2AE3DB1B57D3DE7FB9785A68 /* SearchTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A83233D39DAE732B18B5FDC /* SearchTab.swift */; };
+		413F95E31E6827FAEB3CBFA3 /* CLIP-full.mlmodelc in Resources */ = {isa = PBXBuildFile; fileRef = D5F348A1F4616B631AC7CFB7 /* CLIP-full.mlmodelc */; };
+		49B5DA7D2C53EE32D0565F4D /* LaBSE-full.mlmodelc in Resources */ = {isa = PBXBuildFile; fileRef = ABF95FEC9647431FEEAFA338 /* LaBSE-full.mlmodelc */; };
 		532C614E7B13645DA71AD365 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C576A4E55692957098E23BE /* ContentView.swift */; };
 		61F00FFF9EF02711EDEE3837 /* KnowledgeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABB437CA382ECC712F3DFF50 /* KnowledgeService.swift */; };
 		6A29C8D5955E199DCC79F35C /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = C88EF25FE62F8C31BA86DD22 /* App.swift */; };
+		702EA43E5B99EAC774DCE7F4 /* SwiftyDropbox in Frameworks */ = {isa = PBXBuildFile; productRef = 5298B95C842D4C236797A16C /* SwiftyDropbox */; };
 		9FB8A0063255C552DB471535 /* TSUUIDKit in Frameworks */ = {isa = PBXBuildFile; productRef = 0A229220D08C73793D8195D5 /* TSUUIDKit */; };
+		A2B5C6A8881F8C6752EE8FF8 /* checkpoint-10k.db in Resources */ = {isa = PBXBuildFile; fileRef = EBD564DA1D583E10062EE6A4 /* checkpoint-10k.db */; };
 		AE93543E0ACE98EA49539223 /* SearchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C8C754642807CD43D05BDE6 /* SearchViewModel.swift */; };
 		B5C20C89AF83A87AC197D7C4 /* CaptureTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F45345D31AE9ED4C8DC06E /* CaptureTab.swift */; };
 		CDAA7489FB8D0E2715921992 /* SearchDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5C7F093F467F19123B64D14 /* SearchDetailView.swift */; };
@@ -33,11 +37,14 @@
 		9D2A53A0EF8744669A93FE31 /* TSUUIDKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TSUUIDKit; path = ../TSUUIDKit; sourceTree = SOURCE_ROOT; };
 		A1D26D3257C241A915D5EA55 /* TSUUID768.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TSUUID768.entitlements; sourceTree = "<group>"; };
 		ABB437CA382ECC712F3DFF50 /* KnowledgeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KnowledgeService.swift; sourceTree = "<group>"; };
+		ABF95FEC9647431FEEAFA338 /* LaBSE-full.mlmodelc */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "LaBSE-full.mlmodelc"; path = "../models/LaBSE-full.mlmodelc"; sourceTree = SOURCE_ROOT; };
 		B53AFC4E701389F79620495D /* SyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncService.swift; sourceTree = "<group>"; };
 		C88EF25FE62F8C31BA86DD22 /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
 		D5C7F093F467F19123B64D14 /* SearchDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchDetailView.swift; sourceTree = "<group>"; };
+		D5F348A1F4616B631AC7CFB7 /* CLIP-full.mlmodelc */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "CLIP-full.mlmodelc"; path = "../models/CLIP-full.mlmodelc"; sourceTree = SOURCE_ROOT; };
 		DD4586EF7FCB4326C6FB99AA /* ChainsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChainsTab.swift; sourceTree = "<group>"; };
 		E6FA7EBF8963195559E35E66 /* SearchResultRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResultRow.swift; sourceTree = "<group>"; };
+		EBD564DA1D583E10062EE6A4 /* checkpoint-10k.db */ = {isa = PBXFileReference; path = "checkpoint-10k.db"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -46,6 +53,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				9FB8A0063255C552DB471535 /* TSUUIDKit in Frameworks */,
+				702EA43E5B99EAC774DCE7F4 /* SwiftyDropbox in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -79,8 +87,11 @@
 		52280C31B3B60D2F10C0ED11 = {
 			isa = PBXGroup;
 			children = (
+				8C37B70DD8A619C300D7B947 /* models */,
 				1B93592817F2B361FFCF38E9 /* Packages */,
 				68108636F5CA9A4AD178B54B /* TSUUID768 */,
+				D5F348A1F4616B631AC7CFB7 /* CLIP-full.mlmodelc */,
+				ABF95FEC9647431FEEAFA338 /* LaBSE-full.mlmodelc */,
 				92F12D8811F70A23C4DC1FF4 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -111,6 +122,15 @@
 				A1D26D3257C241A915D5EA55 /* TSUUID768.entitlements */,
 			);
 			path = TSUUID768;
+			sourceTree = "<group>";
+		};
+		8C37B70DD8A619C300D7B947 /* models */ = {
+			isa = PBXGroup;
+			children = (
+				EBD564DA1D583E10062EE6A4 /* checkpoint-10k.db */,
+			);
+			name = models;
+			path = ../models;
 			sourceTree = "<group>";
 		};
 		92F12D8811F70A23C4DC1FF4 /* Products */ = {
@@ -161,6 +181,7 @@
 			buildConfigurationList = E1B0A5736AF30AB76B2F6D21 /* Build configuration list for PBXNativeTarget "TSUUID768" */;
 			buildPhases = (
 				A3EC8E59B9C01DA2B0643A62 /* Sources */,
+				38DC0857FB6E153E061B923A /* Resources */,
 				1DB1A67FA360918B51A0663C /* Frameworks */,
 			);
 			buildRules = (
@@ -170,6 +191,7 @@
 			name = TSUUID768;
 			packageProductDependencies = (
 				0A229220D08C73793D8195D5 /* TSUUIDKit */,
+				5298B95C842D4C236797A16C /* SwiftyDropbox */,
 			);
 			productName = TSUUID768;
 			productReference = 211B5BE800A6E57D20D1E7AE /* TSUUID768.app */;
@@ -200,6 +222,7 @@
 			mainGroup = 52280C31B3B60D2F10C0ED11;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				2688244B9C5F246B4D44B4E8 /* XCRemoteSwiftPackageReference "SwiftyDropbox" */,
 				563B91E0BB1C9D88666F7CE8 /* XCLocalSwiftPackageReference "../TSUUIDKit" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -211,6 +234,19 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		38DC0857FB6E153E061B923A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				413F95E31E6827FAEB3CBFA3 /* CLIP-full.mlmodelc in Resources */,
+				49B5DA7D2C53EE32D0565F4D /* LaBSE-full.mlmodelc in Resources */,
+				A2B5C6A8881F8C6752EE8FF8 /* checkpoint-10k.db in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		A3EC8E59B9C01DA2B0643A62 /* Sources */ = {
@@ -434,10 +470,26 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		2688244B9C5F246B4D44B4E8 /* XCRemoteSwiftPackageReference "SwiftyDropbox" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/dropbox/SwiftyDropbox.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 10.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
 		0A229220D08C73793D8195D5 /* TSUUIDKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = TSUUIDKit;
+		};
+		5298B95C842D4C236797A16C /* SwiftyDropbox */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2688244B9C5F246B4D44B4E8 /* XCRemoteSwiftPackageReference "SwiftyDropbox" */;
+			productName = SwiftyDropbox;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

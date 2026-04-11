@@ -8,13 +8,28 @@ options:
 packages:
   TSUUIDKit:
     path: ../TSUUIDKit
+  SwiftyDropbox:
+    url: https://github.com/dropbox/SwiftyDropbox.git
+    from: "10.0.0"
 targets:
   TSUUID768:
     type: application
     platform: iOS
-    sources: [TSUUID768]
+    sources:
+      - TSUUID768
+      - path: ../models/LaBSE-full.mlmodelc
+        buildPhase: resources
+        type: folder
+      - path: ../models/CLIP-full.mlmodelc
+        buildPhase: resources
+        type: folder
+      - path: ../models/checkpoint-10k.db
+        buildPhase: resources
+        type: file
     dependencies:
       - package: TSUUIDKit
+      - package: SwiftyDropbox
+        product: SwiftyDropbox
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.tsuuid.768

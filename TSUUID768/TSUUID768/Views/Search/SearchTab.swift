@@ -48,6 +48,12 @@ struct SearchTab: View {
                     .listStyle(.plain)
                 }
             }
+            .onTapGesture {
+                UIApplication.shared.sendAction(
+                    #selector(UIResponder.resignFirstResponder),
+                    to: nil, from: nil, for: nil
+                )
+            }
             .navigationTitle("Search")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {

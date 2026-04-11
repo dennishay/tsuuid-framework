@@ -48,6 +48,15 @@ struct SyncTab: View {
                     LabeledContent("LaBSE", value: models.labseState.rawValue)
                     LabeledContent("CLIP", value: models.clipState.rawValue)
                 }
+
+                Section("Debug") {
+                    Text(knowledge.statusMessage)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text(models.statusMessage)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
             .navigationTitle("Sync")
         }
