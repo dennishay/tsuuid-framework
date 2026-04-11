@@ -18,9 +18,14 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.tsuuid.768
+        DEVELOPMENT_TEAM: TRB44FFLZ9
+        CODE_SIGN_STYLE: Automatic
         GENERATE_INFOPLIST_FILE: true
         INFOPLIST_KEY_UILaunchScreen_Generation: true
         INFOPLIST_KEY_CFBundleDisplayName: "768"
+        INFOPLIST_KEY_NSCameraUsageDescription: "Camera captures photos for CLIP visual encoding"
+        INFOPLIST_KEY_NSMicrophoneUsageDescription: "Microphone records voice for speech-to-text encoding"
+        INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "Speech recognition transcribes voice for LaBSE encoding"
         SWIFT_STRICT_CONCURRENCY: complete
     entitlements:
       path: TSUUID768/TSUUID768.entitlements

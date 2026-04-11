@@ -184,6 +184,10 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
+					6A6AF19444635720AFEDA126 = {
+						DevelopmentTeam = TRB44FFLZ9;
+						ProvisioningStyle = Automatic;
+					};
 				};
 			};
 			buildConfigurationList = 83778BC05BA18FAFEBB674FB /* Build configuration list for PBXProject "TSUUID768" */;
@@ -237,8 +241,13 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = TSUUID768/TSUUID768.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = TRB44FFLZ9;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = 768;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Camera captures photos for CLIP visual encoding";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Microphone records voice for speech-to-text encoding";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Speech recognition transcribes voice for LaBSE encoding";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -257,8 +266,13 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = TSUUID768/TSUUID768.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = TRB44FFLZ9;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = 768;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Camera captures photos for CLIP visual encoding";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Microphone records voice for speech-to-text encoding";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Speech recognition transcribes voice for LaBSE encoding";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
