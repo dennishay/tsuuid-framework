@@ -14,6 +14,7 @@ from tsuuid.packing import pack_trits_to_uuid, unpack_uuid_to_trits
 from tsuuid.dimensions import SemanticDimensions
 from tsuuid.compose import compose_uuids, semantic_distance
 from tsuuid.delta import DeltaEncoder, SparseDelta, compression_ratio, cosine_error
+from tsuuid.chain import Chain, ChainLink, GapReport
 
 __all__ = [
     "SemanticCodec",
@@ -26,4 +27,7 @@ __all__ = [
     "SparseDelta",
     "compression_ratio",
     "cosine_error",
+    "Chain",
+    "ChainLink",
+    "GapReport",
 ]
