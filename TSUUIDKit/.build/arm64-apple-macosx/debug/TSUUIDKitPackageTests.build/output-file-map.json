@@ -1,0 +1,12 @@
+{
+  "": {
+    "swift-dependencies": "/Users/dennishay/tsuuid-framework/TSUUIDKit/.build/arm64-apple-macosx/debug/TSUUIDKitPackageTests.build/primary.swiftdeps"
+  },
+  "/Users/dennishay/tsuuid-framework/TSUUIDKit/.build/arm64-apple-macosx/debug/TSUUIDKitPackageTests.derived/runner.swift": {
+    "dependencies": "/Users/dennishay/tsuuid-framework/TSUUIDKit/.build/arm64-apple-macosx/debug/TSUUIDKitPackageTests.build/runner.d",
+    "object": "/Users/dennishay/tsuuid-framework/TSUUIDKit/.build/arm64-apple-macosx/debug/TSUUIDKitPackageTests.build/runner.swift.o",
+    "swiftmodule": "/Users/dennishay/tsuuid-framework/TSUUIDKit/.build/arm64-apple-macosx/debug/TSUUIDKitPackageTests.build/runner~partial.swiftmodule",
+    "swift-dependencies": "/Users/dennishay/tsuuid-framework/TSUUIDKit/.build/arm64-apple-macosx/debug/TSUUIDKitPackageTests.build/runner.swiftdeps",
+    "diagnostics": "/Users/dennishay/tsuuid-framework/TSUUIDKit/.build/arm64-apple-macosx/debug/TSUUIDKitPackageTests.build/runner.dia"
+  }
+}

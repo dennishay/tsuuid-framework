@@ -1,0 +1,12 @@
+{
+  "": {
+    "swift-dependencies": "/Users/dennishay/tsuuid-framework/TSUUIDKit/.build/arm64-apple-macosx/debug/TSUUIDKit.build/primary.swiftdeps"
+  },
+  "/Users/dennishay/tsuuid-framework/TSUUIDKit/Sources/TSUUIDKit/Core/Vector768.swift": {
+    "dependencies": "/Users/dennishay/tsuuid-framework/TSUUIDKit/.build/arm64-apple-macosx/debug/TSUUIDKit.build/Vector768.d",
+    "object": "/Users/dennishay/tsuuid-framework/TSUUIDKit/.build/arm64-apple-macosx/debug/TSUUIDKit.build/Vector768.swift.o",
+    "swiftmodule": "/Users/dennishay/tsuuid-framework/TSUUIDKit/.build/arm64-apple-macosx/debug/TSUUIDKit.build/Vector768~partial.swiftmodule",
+    "swift-dependencies": "/Users/dennishay/tsuuid-framework/TSUUIDKit/.build/arm64-apple-macosx/debug/TSUUIDKit.build/Vector768.swiftdeps",
+    "diagnostics": "/Users/dennishay/tsuuid-framework/TSUUIDKit/.build/arm64-apple-macosx/debug/TSUUIDKit.build/Vector768.dia"
+  }
+}
