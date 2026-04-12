@@ -17,42 +17,32 @@ struct SyncTab: View {
 
                     if !sync.isAuthorized {
                         Button("Sign in to Dropbox") {
-                            // Get the root view controller for OAuth
-                            if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                               let vc = scene.windows.first?.rootViewController {
-                                sync.authorize(from: vc)
+                            signInToDropbox()
+                        }
+                    } else {
+                        Button {
+                            Task {
+                                let dest = FileManager.default
+                                    .urls(for: .documentDirectory, in: .userDomainMask).first!
+                                    .appendingPathComponent("vectors.db")
+                                await sync.downloadCheckpoint(to: dest)
+                                await knowledge.load()
+                            }
+                        } label: {
+                            HStack {
+                                if sync.state == .syncing { ProgressView() }
+                                Text(sync.state == .syncing ? "Downloading..." : "Download Checkpoint")
                             }
                         }
-                    } else if sync.state == .disconnected {
-                        Button("Connect") { sync.connect() }
-                    }
-                }
+                        .disabled(sync.state == .syncing)
 
-                Section("Sync") {
-                    LabeledContent("Pending outgoing", value: "\(sync.pendingOutgoing)")
-                    LabeledContent("Pending incoming", value: "\(sync.pendingIncoming)")
-
-                    Button {
-                        Task {
-                            let dest = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-                                .appendingPathComponent("vectors.db")
-                            await sync.downloadCheckpoint(to: dest)
-                            await knowledge.load()
+                        Button {
+                            Task { await sync.pullDeltas(knowledge: knowledge) }
+                        } label: {
+                            Text("Pull Deltas")
                         }
-                    } label: {
-                        HStack {
-                            if sync.state == .syncing { ProgressView() }
-                            Text(sync.state == .syncing ? "Syncing..." : "Download Checkpoint")
-                        }
+                        .disabled(sync.state == .syncing)
                     }
-                    .disabled(sync.state != .connected)
-
-                    Button {
-                        Task { await sync.pullDeltas(knowledge: knowledge) }
-                    } label: {
-                        Text("Pull Deltas")
-                    }
-                    .disabled(sync.state != .connected)
                 }
 
                 Section("Knowledge Graph") {
@@ -81,9 +71,14 @@ struct SyncTab: View {
                 }
             }
             .navigationTitle("Sync")
-            .onAppear {
-                sync.connect()
-            }
         }
+    }
+
+    private func signInToDropbox() {
+        guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let vc = scene.keyWindow?.rootViewController else {
+            return
+        }
+        sync.authorize(from: vc)
     }
 }

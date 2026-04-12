@@ -17,6 +17,12 @@ targets:
     platform: iOS
     sources:
       - TSUUID768
+      - path: ../models/LaBSE-full.mlmodelc
+        buildPhase: resources
+        type: folder
+      - path: ../models/CLIP-full.mlmodelc
+        buildPhase: resources
+        type: folder
       - path: ../models/checkpoint-10k.db
         buildPhase: resources
         type: file
@@ -29,16 +35,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.tsuuid.768
         DEVELOPMENT_TEAM: TRB44FFLZ9
         CODE_SIGN_STYLE: Automatic
-        GENERATE_INFOPLIST_FILE: true
-        INFOPLIST_KEY_UILaunchScreen_Generation: true
-        INFOPLIST_KEY_CFBundleDisplayName: "768"
-        INFOPLIST_KEY_NSCameraUsageDescription: "Camera captures photos for CLIP visual encoding"
-        INFOPLIST_KEY_NSMicrophoneUsageDescription: "Microphone records voice for speech-to-text encoding"
-        INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "Speech recognition transcribes voice for LaBSE encoding"
+        INFOPLIST_FILE: TSUUID768/Info.plist
         SWIFT_STRICT_CONCURRENCY: complete
-        INFOPLIST_KEY_CFBundleURLTypes:
-          - CFBundleURLSchemes:
-              - db-vq19kmto50rkj6v
     entitlements:
       path: TSUUID768/TSUUID768.entitlements
       properties:

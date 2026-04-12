@@ -9,6 +9,7 @@ struct TSUUID768App: App {
     @StateObject private var sync = SyncService()
 
     init() {
+        // Setup Dropbox SDK once at app launch
         DropboxClientsManager.setupWithAppKey(SyncService.dropboxAppKey)
     }
 
@@ -22,9 +23,9 @@ struct TSUUID768App: App {
                 .task {
                     await knowledge.load()
                     await models.loadModels()
+                    sync.connect()  // safe to call — checks authorizedClient
                 }
                 .onOpenURL { url in
-                    // Handle Dropbox OAuth redirect
                     sync.handleAuthRedirect(url)
                 }
                 .onReceive(NotificationCenter.default.publisher(
