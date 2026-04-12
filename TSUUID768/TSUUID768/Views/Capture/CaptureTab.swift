@@ -7,18 +7,21 @@ struct CaptureTab: View {
         case text = "Text"
         case document = "Scan"
         case photo = "Photo"
+        case voice = "Voice"
 
         var icon: String {
             switch self {
             case .text: return "text.cursor"
             case .document: return "doc.viewfinder"
             case .photo: return "camera"
+            case .voice: return "mic"
             }
         }
     }
 
     @EnvironmentObject var knowledge: KnowledgeService
     @EnvironmentObject var model: ModelService
+    @StateObject private var voice = VoiceRecorder()
     @State private var mode: CaptureMode = .text
     @State private var inputText = ""
     @State private var title = ""
@@ -47,6 +50,8 @@ struct CaptureTab: View {
                     documentModeView
                 case .photo:
                     photoModeView
+                case .voice:
+                    voiceModeView
                 }
 
                 Spacer()
@@ -205,6 +210,112 @@ struct CaptureTab: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
         }
+    }
+
+    // MARK: - Voice mode
+
+    private var voiceModeView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: voice.isRecording ? "waveform" : "mic")
+                .font(.system(size: 80))
+                .foregroundStyle(voice.isRecording ? Color.red : Color.accentColor)
+                .symbolEffect(.pulse, isActive: voice.isRecording)
+                .padding(.top, 40)
+
+            Text(voice.isRecording ? "Recording..." : "Voice Note")
+                .font(.title2)
+                .fontWeight(.semibold)
+
+            Text("On-device speech-to-text. Tap mic to start/stop.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+
+            TextField("Domain", text: $domain)
+                .textFieldStyle(.roundedBorder)
+                .padding(.horizontal)
+
+            // Live transcript display
+            ScrollView {
+                Text(voice.transcript.isEmpty ? "Transcript will appear here..." : voice.transcript)
+                    .font(.body)
+                    .foregroundStyle(voice.transcript.isEmpty ? .secondary : .primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding()
+            }
+            .frame(minHeight: 120, maxHeight: 200)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.secondary.opacity(0.3))
+            )
+            .padding(.horizontal)
+
+            HStack(spacing: 12) {
+                Button {
+                    Task { await toggleVoice() }
+                } label: {
+                    HStack {
+                        Image(systemName: voice.isRecording ? "stop.circle.fill" : "mic.circle.fill")
+                        Text(voice.isRecording ? "Stop" : "Record")
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(voice.isRecording ? .red : .accentColor)
+
+                Button {
+                    Task { await encodeVoiceTranscript() }
+                } label: {
+                    HStack {
+                        if isEncoding { ProgressView().tint(.white) }
+                        Text("Encode")
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .disabled(voice.transcript.isEmpty || voice.isRecording || isEncoding)
+            }
+            .padding(.horizontal)
+
+            if let err = voice.errorMessage {
+                Text(err)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .padding(.horizontal)
+            }
+        }
+    }
+
+    private func toggleVoice() async {
+        if voice.isRecording {
+            voice.stop()
+        } else {
+            let ok = await voice.requestPermissions()
+            if ok {
+                do { try voice.start() }
+                catch { voice.errorMessage = error.localizedDescription }
+            }
+        }
+    }
+
+    private func encodeVoiceTranscript() async {
+        let text = voice.transcript
+        guard !text.isEmpty else { return }
+        isEncoding = true
+        do {
+            let vec = try await model.encodeText(text)
+            let preview = String(text.prefix(60))
+            knowledge.insert(vec, path: "voice/\(UUID().uuidString.prefix(8))",
+                           title: preview, domain: domain)
+            confirmMessage = "Voice encoded (\(knowledge.vectorCount) vectors)"
+            voice.transcript = ""
+            showConfirmation = true
+        } catch {
+            confirmMessage = "Failed: \(error.localizedDescription)"
+            showConfirmation = true
+        }
+        isEncoding = false
     }
 
     // MARK: - Encoding

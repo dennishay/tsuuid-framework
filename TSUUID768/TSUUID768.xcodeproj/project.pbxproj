@@ -17,6 +17,7 @@
 		532C614E7B13645DA71AD365 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C576A4E55692957098E23BE /* ContentView.swift */; };
 		6072A3A00EA52B816782592F /* PhotoUploadService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F39887E81DD83E9299EA3790 /* PhotoUploadService.swift */; };
 		61F00FFF9EF02711EDEE3837 /* KnowledgeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABB437CA382ECC712F3DFF50 /* KnowledgeService.swift */; };
+		65C88A2F6245D4F08FEC24A3 /* VoiceRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BA0BF50F3027F3F6572A346 /* VoiceRecorder.swift */; };
 		6A29C8D5955E199DCC79F35C /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = C88EF25FE62F8C31BA86DD22 /* App.swift */; };
 		702EA43E5B99EAC774DCE7F4 /* SwiftyDropbox in Frameworks */ = {isa = PBXBuildFile; productRef = 5298B95C842D4C236797A16C /* SwiftyDropbox */; };
 		9FB8A0063255C552DB471535 /* TSUUIDKit in Frameworks */ = {isa = PBXBuildFile; productRef = 0A229220D08C73793D8195D5 /* TSUUIDKit */; };
@@ -34,6 +35,7 @@
 		1C576A4E55692957098E23BE /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		1F4CACB2CFDE06B4BD05A58C /* DocumentScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentScannerView.swift; sourceTree = "<group>"; };
 		211B5BE800A6E57D20D1E7AE /* TSUUID768.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TSUUID768.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2BA0BF50F3027F3F6572A346 /* VoiceRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceRecorder.swift; sourceTree = "<group>"; };
 		4C8C754642807CD43D05BDE6 /* SearchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchViewModel.swift; sourceTree = "<group>"; };
 		50718CB9B9A80D218A0953DF /* CameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraView.swift; sourceTree = "<group>"; };
 		5A83233D39DAE732B18B5FDC /* SearchTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchTab.swift; sourceTree = "<group>"; };
@@ -117,6 +119,7 @@
 				50718CB9B9A80D218A0953DF /* CameraView.swift */,
 				09F45345D31AE9ED4C8DC06E /* CaptureTab.swift */,
 				1F4CACB2CFDE06B4BD05A58C /* DocumentScannerView.swift */,
+				2BA0BF50F3027F3F6572A346 /* VoiceRecorder.swift */,
 			);
 			path = Capture;
 			sourceTree = "<group>";
@@ -279,6 +282,7 @@
 				AE93543E0ACE98EA49539223 /* SearchViewModel.swift in Sources */,
 				0B4B80F28FAF53B26C62F22D /* SyncService.swift in Sources */,
 				D2A3382418A76E2EE056DFEA /* SyncTab.swift in Sources */,
+				65C88A2F6245D4F08FEC24A3 /* VoiceRecorder.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
