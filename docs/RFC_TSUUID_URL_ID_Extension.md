@@ -19,10 +19,16 @@ Pair every TSUUID with an optional **URL_ID**: a short, immutable, content-addre
 
 ```
 Trits (81)    = semantic identity        — stored in UUID v8
-URL_ID (~8 chars) = retrieval handle    — stored alongside
+URL_ID (~8 chars) = retrieval handle    — stored alongside, NOT in the UUID
 ```
 
 The trits carry meaning. The URL_ID carries retrieval. Together they form a complete reference: *what it means* and *where to get it*.
+
+### Why separate, not embedded
+
+An earlier sketch considered packing the 8-char URL_ID directly into the UUID's payload bits. This was rejected: every bit spent on retrieval metadata is a bit stolen from semantic capacity. Composition, distance, diff, and all other trit-level operations depend on the 81 dimensions being fully committed to meaning. The URL_ID lives in its own column.
+
+The trade-off is explicit: you spend a handful of bytes of metadata storage to preserve the full 81-dimensional semantic space. Worth it.
 
 ## URL_ID Format
 
