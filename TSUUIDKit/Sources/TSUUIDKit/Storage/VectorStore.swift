@@ -53,6 +53,14 @@ public final class VectorStore: @unchecked Sendable {
         lock.unlock()
     }
 
+    /// Reset the store — used before reloading from a fresh checkpoint.
+    public func clear() {
+        lock.lock()
+        vectors.removeAll(keepingCapacity: false)
+        metadata.removeAll(keepingCapacity: false)
+        lock.unlock()
+    }
+
     public func search(_ query: Vector768, domain: String? = nil,
                        limit: Int = 10) -> [SearchResult] {
         let queryF32 = query.toFloat32()

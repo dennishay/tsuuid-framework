@@ -245,8 +245,8 @@ struct CaptureTab: View {
         isEncoding = false
     }
 
-    /// Photo: run Live Text OCR and encode the text.
-    /// CLIP visual encoding comes later — for now text extracted from image works.
+    /// Photo: upload to Dropbox → tinyurl → OCR → encode with link as source.
+    /// The tinyurl ID becomes the retrieval key — tap a search result to open the image.
     private func encodePhoto(_ image: UIImage) async {
         isEncoding = true
         guard let cgImage = image.cgImage else {
@@ -256,24 +256,38 @@ struct CaptureTab: View {
             return
         }
 
-        let extractedText = await extractText(from: cgImage)
-
-        if extractedText.isEmpty {
-            confirmMessage = "No text found in photo. (CLIP visual encoding coming soon.)"
+        // 1. Upload to Dropbox → tinyurl
+        let uploader = PhotoUploadService()
+        var tinyurlId: String? = nil
+        do {
+            let result = try await uploader.upload(image)
+            tinyurlId = result.tinyurlId
+        } catch {
+            confirmMessage = "Upload failed: \(error.localizedDescription)"
             showConfirmation = true
             isEncoding = false
             return
         }
 
+        // 2. OCR
+        let extractedText = await extractText(from: cgImage)
+
+        // 3. Encode — use OCR text if available, else a placeholder
+        let textToEncode = extractedText.isEmpty
+            ? "photo captured at \(Date().formatted())"
+            : extractedText
+
         do {
-            let vec = try await model.encodeText(extractedText)
-            let preview = String(extractedText.prefix(60))
-            knowledge.insert(vec, path: "photo/\(UUID().uuidString.prefix(8))",
-                           title: preview, domain: domain)
-            confirmMessage = "Photo text encoded (\(knowledge.vectorCount) vectors)"
+            let vec = try await model.encodeText(textToEncode)
+            let preview = extractedText.isEmpty
+                ? "Photo (\(tinyurlId ?? "?"))"
+                : String(extractedText.prefix(60))
+            let source = tinyurlId.map { "tinyurl:\($0)" } ?? "photo/\(UUID().uuidString.prefix(8))"
+            knowledge.insert(vec, path: source, title: preview, domain: domain)
+            confirmMessage = "Photo → tinyurl/\(tinyurlId ?? "?") (\(knowledge.vectorCount) vectors)"
             showConfirmation = true
         } catch {
-            confirmMessage = "Failed: \(error.localizedDescription)"
+            confirmMessage = "Encoding failed: \(error.localizedDescription)"
             showConfirmation = true
         }
         isEncoding = false

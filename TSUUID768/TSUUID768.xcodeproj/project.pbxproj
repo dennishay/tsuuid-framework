@@ -15,6 +15,7 @@
 		413F95E31E6827FAEB3CBFA3 /* CLIP-full.mlmodelc in Resources */ = {isa = PBXBuildFile; fileRef = D5F348A1F4616B631AC7CFB7 /* CLIP-full.mlmodelc */; };
 		49B5DA7D2C53EE32D0565F4D /* LaBSE-full.mlmodelc in Resources */ = {isa = PBXBuildFile; fileRef = ABF95FEC9647431FEEAFA338 /* LaBSE-full.mlmodelc */; };
 		532C614E7B13645DA71AD365 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C576A4E55692957098E23BE /* ContentView.swift */; };
+		6072A3A00EA52B816782592F /* PhotoUploadService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F39887E81DD83E9299EA3790 /* PhotoUploadService.swift */; };
 		61F00FFF9EF02711EDEE3837 /* KnowledgeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABB437CA382ECC712F3DFF50 /* KnowledgeService.swift */; };
 		6A29C8D5955E199DCC79F35C /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = C88EF25FE62F8C31BA86DD22 /* App.swift */; };
 		702EA43E5B99EAC774DCE7F4 /* SwiftyDropbox in Frameworks */ = {isa = PBXBuildFile; productRef = 5298B95C842D4C236797A16C /* SwiftyDropbox */; };
@@ -50,6 +51,7 @@
 		DD4586EF7FCB4326C6FB99AA /* ChainsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChainsTab.swift; sourceTree = "<group>"; };
 		E6FA7EBF8963195559E35E66 /* SearchResultRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResultRow.swift; sourceTree = "<group>"; };
 		EBD564DA1D583E10062EE6A4 /* checkpoint-10k.db */ = {isa = PBXFileReference; path = "checkpoint-10k.db"; sourceTree = "<group>"; };
+		F39887E81DD83E9299EA3790 /* PhotoUploadService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoUploadService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -154,6 +156,7 @@
 			children = (
 				ABB437CA382ECC712F3DFF50 /* KnowledgeService.swift */,
 				6F8FBAE47B001A85A9A3C969 /* ModelService.swift */,
+				F39887E81DD83E9299EA3790 /* PhotoUploadService.swift */,
 				B53AFC4E701389F79620495D /* SyncService.swift */,
 			);
 			path = Services;
@@ -269,6 +272,7 @@
 				1AF51483654B08FD47F17F86 /* DocumentScannerView.swift in Sources */,
 				61F00FFF9EF02711EDEE3837 /* KnowledgeService.swift in Sources */,
 				D70A35B06F14F292A49AC7E4 /* ModelService.swift in Sources */,
+				6072A3A00EA52B816782592F /* PhotoUploadService.swift in Sources */,
 				CDAA7489FB8D0E2715921992 /* SearchDetailView.swift in Sources */,
 				FC2A72B21D272136FFEBA086 /* SearchResultRow.swift in Sources */,
 				2AE3DB1B57D3DE7FB9785A68 /* SearchTab.swift in Sources */,
