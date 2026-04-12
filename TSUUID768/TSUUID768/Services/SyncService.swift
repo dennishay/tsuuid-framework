@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import TSUUIDKit
 import SwiftyDropbox
 
@@ -8,8 +9,7 @@ class SyncService: ObservableObject {
         case disconnected, connecting, connected, syncing, error
     }
 
-    // Replace with your Dropbox App Key from developers.dropbox.com
-    static let dropboxAppKey = "REPLACE_WITH_APP_KEY"
+    static let dropboxAppKey = "vq19kmto50rkj6v"
     static let syncPath = "/__768_sync"
 
     @Published var state: ConnectionState = .disconnected
@@ -20,7 +20,6 @@ class SyncService: ObservableObject {
 
     private var client: DropboxClient?
 
-    /// Local staging directory for downloaded deltas
     private var localSyncDir: URL {
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
         let dir = docs.appendingPathComponent("__768_sync")
@@ -28,17 +27,14 @@ class SyncService: ObservableObject {
         return dir
     }
 
-    /// Initialize Dropbox SDK — call once at app launch
     func setup() {
         DropboxClientsManager.setupWithAppKey(Self.dropboxAppKey)
     }
 
-    /// Check if we have a saved Dropbox auth token
     var isAuthorized: Bool {
         DropboxClientsManager.authorizedClient != nil
     }
 
-    /// Start OAuth flow — returns the auth URL for ASWebAuthenticationSession
     func authorize(from viewController: UIViewController) {
         let scopeRequest = ScopeRequest(
             scopeType: .user,
@@ -54,17 +50,16 @@ class SyncService: ObservableObject {
         )
     }
 
-    /// Call after OAuth redirect completes
-    func handleAuthRedirect(_ url: URL) -> Bool {
-        let result = DropboxClientsManager.handleRedirectURL(url)
-        if case .success = result {
-            connect()
-            return true
+    func handleAuthRedirect(_ url: URL) {
+        DropboxClientsManager.handleRedirectURL(url, includeBackgroundClient: false) { [weak self] result in
+            Task { @MainActor in
+                if let result, case .success = result {
+                    self?.connect()
+                }
+            }
         }
-        return false
     }
 
-    /// Connect using existing auth
     func connect() {
         if let authorized = DropboxClientsManager.authorizedClient {
             client = authorized
@@ -72,7 +67,7 @@ class SyncService: ObservableObject {
             statusMessage = "Connected to Dropbox"
         } else {
             state = .disconnected
-            statusMessage = "Not authorized — tap Connect to sign in"
+            statusMessage = "Not authorized"
         }
     }
 
@@ -85,11 +80,12 @@ class SyncService: ObservableObject {
         let checkpointPath = "\(Self.syncPath)/checkpoints/latest.db"
 
         do {
-            let result = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Files.FileMetadata, Error>) in
-                client.files.download(path: checkpointPath, overwrite: true, destination: { _, _ in destination })
+            let result = try await withCheckedThrowingContinuation {
+                (continuation: CheckedContinuation<Files.FileMetadata, Error>) in
+                client.files.download(path: checkpointPath, overwrite: true, destination: destination)
                     .response { result, error in
-                        if let result = result {
-                            continuation.resume(returning: result.0)
+                        if let (metadata, _) = result {
+                            continuation.resume(returning: metadata)
                         } else if let error = error {
                             continuation.resume(throwing: NSError(domain: "Dropbox", code: -1,
                                 userInfo: [NSLocalizedDescriptionKey: "\(error)"]))
@@ -114,7 +110,8 @@ class SyncService: ObservableObject {
         let deltasPath = "\(Self.syncPath)/deltas/mac"
 
         do {
-            let result = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Files.ListFolderResult, Error>) in
+            let result = try await withCheckedThrowingContinuation {
+                (continuation: CheckedContinuation<Files.ListFolderResult, Error>) in
                 client.files.listFolder(path: deltasPath).response { result, error in
                     if let result = result {
                         continuation.resume(returning: result)
@@ -133,31 +130,19 @@ class SyncService: ObservableObject {
             pendingIncoming = deltaFiles.count
             statusMessage = "\(deltaFiles.count) delta files found"
 
-            // Download and apply each delta
             for file in deltaFiles {
                 let localPath = localSyncDir.appendingPathComponent(file.name)
-                _ = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Files.FileMetadata, Error>) in
-                    client.files.download(path: file.pathLower!, overwrite: true, destination: { _, _ in localPath })
+                _ = try await withCheckedThrowingContinuation {
+                    (continuation: CheckedContinuation<Files.FileMetadata, Error>) in
+                    client.files.download(path: file.pathLower!, overwrite: true, destination: localPath)
                         .response { result, error in
-                            if let result = result {
-                                continuation.resume(returning: result.0)
+                            if let (metadata, _) = result {
+                                continuation.resume(returning: metadata)
                             } else if let error = error {
                                 continuation.resume(throwing: NSError(domain: "Dropbox", code: -1,
                                     userInfo: [NSLocalizedDescriptionKey: "\(error)"]))
                             }
                         }
-                }
-
-                // Apply the delta bundle
-                if let data = try? Data(contentsOf: localPath) {
-                    let syncEngine = SyncEngine(peer: .iphone, syncRoot: localSyncDir)
-                    _ = try? syncEngine.pullIncoming { delta in
-                        let encoder = DeltaEncoder()
-                        let stored = Vector768()
-                        let vec = encoder.applyDelta(stored: stored, delta: delta)
-                        knowledge.insert(vec, path: "sync-\(UUID().uuidString.prefix(8))",
-                                       title: file.name, domain: "sync")
-                    }
                 }
                 pendingIncoming -= 1
             }
