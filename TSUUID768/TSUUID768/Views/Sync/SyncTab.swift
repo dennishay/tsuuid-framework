@@ -26,7 +26,7 @@ struct SyncTab: View {
                                     .urls(for: .documentDirectory, in: .userDomainMask).first!
                                     .appendingPathComponent("vectors.db")
                                 await sync.downloadCheckpoint(to: dest)
-                                await knowledge.load()
+                                await knowledge.reload()
                             }
                         } label: {
                             HStack {

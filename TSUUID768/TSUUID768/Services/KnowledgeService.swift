@@ -63,6 +63,7 @@ class KnowledgeService: ObservableObject {
         guard let dbPath = findDatabase() else { return }
 
         statusMessage = "Loading vectors..."
+        store.clear()
         do {
             database = try VectorDatabase(path: dbPath)
             let count = try database!.loadAll(into: store)
@@ -73,6 +74,12 @@ class KnowledgeService: ObservableObject {
         } catch {
             statusMessage = "Load failed: \(error.localizedDescription)"
         }
+    }
+
+    /// Force reload — call after downloading a new checkpoint from Dropbox.
+    func reload() async {
+        database = nil
+        await load()
     }
 
     func search(_ query: Vector768, domain: String? = nil,
