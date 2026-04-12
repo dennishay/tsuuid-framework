@@ -19,67 +19,57 @@ class ModelService: ObservableObject {
     private let clip = CLIPEncoder()
     #endif
 
-    /// Search order: app bundle → App Group container → Documents
     private func findModel(named name: String) -> URL? {
-        // 1. App bundle (compiled .mlmodelc)
+        let fm = FileManager.default
+
         if let bundled = Bundle.main.url(forResource: name, withExtension: "mlmodelc") {
             return bundled
         }
 
-        // 2. App Group container
-        if let container = FileManager.default.containerURL(
+        if let container = fm.containerURL(
             forSecurityApplicationGroupIdentifier: "group.com.tsuuid.768"
         ) {
-            let groupPath = container.appendingPathComponent("models/\(name).mlmodelc")
-            if FileManager.default.fileExists(atPath: groupPath.path) {
-                return groupPath
-            }
-            // Also check for .mlpackage (Core ML compiles on first load)
-            let pkgPath = container.appendingPathComponent("models/\(name).mlpackage")
-            if FileManager.default.fileExists(atPath: pkgPath.path) {
-                return pkgPath
-            }
+            let path = container.appendingPathComponent("models/\(name).mlmodelc")
+            if fm.fileExists(atPath: path.path) { return path }
         }
 
-        // 3. Documents directory (for manual sideloading via Files app)
-        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
-        if let docsPath = docs?.appendingPathComponent("models/\(name).mlmodelc"),
-           FileManager.default.fileExists(atPath: docsPath.path) {
-            return docsPath
+        if let docs = fm.urls(for: .documentDirectory, in: .userDomainMask).first {
+            let path = docs.appendingPathComponent("models/\(name).mlmodelc")
+            if fm.fileExists(atPath: path.path) { return path }
         }
 
         return nil
     }
 
+    /// Don't call at startup. Models load on first encode to save memory.
     func loadModels() async {
+        // Skip auto-loading — models are loaded lazily on first encodeText() call.
+        // This saves ~1.1GB RAM at launch.
+        statusMessage = "Models load on first search"
+    }
+
+    /// Lazy-load LaBSE on demand
+    private func ensureLaBSELoaded() async throws {
         #if canImport(CoreML)
-        // LaBSE
+        guard labseState != .ready else { return }
+
         labseState = .loading
-        if let labseURL = findModel(named: "LaBSE-full") {
-            do {
-                try await labse.load(modelURL: labseURL)
-                labseState = .ready
-                statusMessage = "LaBSE loaded"
-            } catch {
-                labseState = .error
-                statusMessage = "LaBSE error: \(error.localizedDescription)"
-            }
-        } else {
+        statusMessage = "Loading LaBSE..."
+
+        guard let url = findModel(named: "LaBSE-full") else {
             labseState = .notFound
-            statusMessage = "LaBSE model not found — see Sync tab for setup"
+            statusMessage = "LaBSE not found — download via Dropbox sync"
+            throw ModelError.notReady("notFound")
         }
 
-        // CLIP
-        clipState = .loading
-        if let clipURL = findModel(named: "CLIP-full") {
-            do {
-                try await clip.load(modelURL: clipURL)
-                clipState = .ready
-            } catch {
-                clipState = .error
-            }
-        } else {
-            clipState = .notFound
+        do {
+            try await labse.load(modelURL: url)
+            labseState = .ready
+            statusMessage = "LaBSE ready"
+        } catch {
+            labseState = .error
+            statusMessage = "LaBSE error: \(error.localizedDescription)"
+            throw error
         }
         #endif
     }
@@ -96,9 +86,7 @@ class ModelService: ObservableObject {
 
     func encodeText(_ text: String) async throws -> Vector768 {
         #if canImport(CoreML)
-        guard labseState == .ready else {
-            throw ModelError.notReady(labseState.rawValue)
-        }
+        try await ensureLaBSELoaded()
         return try await labse.encode(text)
         #else
         throw ModelError.notAvailable

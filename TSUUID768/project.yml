@@ -17,12 +17,6 @@ targets:
     platform: iOS
     sources:
       - TSUUID768
-      - path: ../models/LaBSE-full.mlmodelc
-        buildPhase: resources
-        type: folder
-      - path: ../models/CLIP-full.mlmodelc
-        buildPhase: resources
-        type: folder
       - path: ../models/checkpoint-10k.db
         buildPhase: resources
         type: file
