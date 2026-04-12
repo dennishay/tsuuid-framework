@@ -82,7 +82,6 @@ struct SyncTab: View {
             }
             .navigationTitle("Sync")
             .onAppear {
-                sync.setup()
                 sync.connect()
             }
         }

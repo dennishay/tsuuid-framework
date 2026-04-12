@@ -42,6 +42,9 @@ targets:
         INFOPLIST_KEY_NSMicrophoneUsageDescription: "Microphone records voice for speech-to-text encoding"
         INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "Speech recognition transcribes voice for LaBSE encoding"
         SWIFT_STRICT_CONCURRENCY: complete
+        INFOPLIST_KEY_CFBundleURLTypes:
+          - CFBundleURLSchemes:
+              - db-vq19kmto50rkj6v
     entitlements:
       path: TSUUID768/TSUUID768.entitlements
       properties:
