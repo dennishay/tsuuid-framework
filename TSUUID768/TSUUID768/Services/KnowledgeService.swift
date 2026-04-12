@@ -87,13 +87,29 @@ class KnowledgeService: ObservableObject {
         store.search(query, domain: domain, limit: limit)
     }
 
+    /// Origin of an insert — distinguishes user captures from sync-applied rows.
+    /// Local inserts queue for outbound push; sync inserts do not (prevents echo).
+    enum InsertOrigin { case local, sync }
+
+    /// Notification posted after a local insert succeeds. userInfo carries a SyncRow.
+    static let localInsertNotification = Notification.Name("TSUUID768.vectorLocallyInserted")
+
     func insert(_ vec: Vector768, path: String, title: String,
-                domain: String) {
+                domain: String, origin: InsertOrigin = .local) {
         let meta = VectorMeta(uuid: UUID(), source: path,
                               domain: domain, encodedAt: Date())
         store.insert(vec, meta: meta)
         try? database?.store(path: path, title: title, vec: vec, domain: domain)
         vectorCount = store.count
         domainStats = store.stats()
+
+        if origin == .local {
+            let row = SyncRow(path: path, title: title, domain: domain, vec: vec)
+            NotificationCenter.default.post(
+                name: Self.localInsertNotification,
+                object: nil,
+                userInfo: ["row": row]
+            )
+        }
     }
 }

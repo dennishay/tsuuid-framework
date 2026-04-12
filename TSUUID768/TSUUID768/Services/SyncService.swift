@@ -19,6 +19,8 @@ class SyncService: ObservableObject {
     @Published var statusMessage: String = ""
 
     private var client: DropboxClient?
+    private var localInsertObserver: NSObjectProtocol?
+    private let pendingQueueLock = NSLock()
 
     private var localSyncDir: URL {
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
@@ -27,8 +29,106 @@ class SyncService: ObservableObject {
         return dir
     }
 
+    /// Append-only JSONL file of locally-inserted rows waiting to be pushed.
+    /// Survives app restarts.
+    private var pendingOutboundFile: URL {
+        let dir = localSyncDir.appendingPathComponent("deltas/iphone")
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir.appendingPathComponent("pending.jsonl")
+    }
+
     func setup() {
         DropboxClientsManager.setupWithAppKey(Self.dropboxAppKey)
+        observeLocalInserts()
+        refreshPendingCount()
+    }
+
+    private func observeLocalInserts() {
+        if let existing = localInsertObserver {
+            NotificationCenter.default.removeObserver(existing)
+        }
+        localInsertObserver = NotificationCenter.default.addObserver(
+            forName: KnowledgeService.localInsertNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] note in
+            guard let self = self,
+                  let row = note.userInfo?["row"] as? SyncRow else { return }
+            self.appendToOutboundQueue(row)
+        }
+    }
+
+    private func appendToOutboundQueue(_ row: SyncRow) {
+        pendingQueueLock.lock()
+        defer { pendingQueueLock.unlock() }
+        do {
+            let line = try JSONEncoder.sortedKeys.encode(row)
+            var data = line
+            data.append(0x0a)  // newline
+            let url = pendingOutboundFile
+            if FileManager.default.fileExists(atPath: url.path) {
+                let handle = try FileHandle(forWritingTo: url)
+                defer { try? handle.close() }
+                try handle.seekToEnd()
+                try handle.write(contentsOf: data)
+            } else {
+                try data.write(to: url, options: .atomic)
+            }
+            pendingOutgoing += 1
+        } catch {
+            statusMessage = "Queue failed: \(error.localizedDescription)"
+        }
+    }
+
+    private func refreshPendingCount() {
+        pendingQueueLock.lock()
+        defer { pendingQueueLock.unlock() }
+        let url = pendingOutboundFile
+        guard FileManager.default.fileExists(atPath: url.path),
+              let text = try? String(contentsOf: url, encoding: .utf8) else {
+            pendingOutgoing = 0
+            return
+        }
+        pendingOutgoing = text.split(separator: "\n",
+                                      omittingEmptySubsequences: true).count
+    }
+
+    /// Move `pending.jsonl` to a timestamped bundle ready for upload.
+    /// Returns the bundle URL if there was anything to rotate, nil otherwise.
+    private func rotatePendingBundle() -> URL? {
+        pendingQueueLock.lock()
+        defer { pendingQueueLock.unlock() }
+
+        let pending = pendingOutboundFile
+        guard FileManager.default.fileExists(atPath: pending.path) else { return nil }
+
+        let attrs = try? FileManager.default.attributesOfItem(atPath: pending.path)
+        if let size = attrs?[.size] as? NSNumber, size.intValue == 0 { return nil }
+
+        let fmt = DateFormatter()
+        fmt.dateFormat = "yyyyMMddHHmm"
+        let stamp = fmt.string(from: Date())
+        let bundle = pending.deletingLastPathComponent()
+            .appendingPathComponent("\(stamp).jsonl")
+
+        do {
+            if FileManager.default.fileExists(atPath: bundle.path) {
+                // Same-minute rotation — append.
+                let existing = (try? Data(contentsOf: bundle)) ?? Data()
+                let incoming = (try? Data(contentsOf: pending)) ?? Data()
+                try (existing + incoming).write(to: bundle, options: .atomic)
+            } else {
+                try FileManager.default.moveItem(at: pending, to: bundle)
+            }
+            // Clear pending on success.
+            if FileManager.default.fileExists(atPath: pending.path) {
+                try FileManager.default.removeItem(at: pending)
+            }
+            return bundle
+        } catch {
+            statusMessage = "Rotate failed: \(error.localizedDescription)"
+            return nil
+        }
     }
 
     var isAuthorized: Bool {
@@ -101,13 +201,18 @@ class SyncService: ObservableObject {
         state = .connected
     }
 
-    /// Check for new delta files from Mac
+    /// Key under which the last-applied inbound bundle filename is persisted.
+    /// Guards against re-applying the same bundle on repeated pulls.
+    private static let lastAppliedKey = "TSUUID768.sync.lastAppliedMacBundle"
+
+    /// Check for new delta files from Mac, parse JSONL, upsert each row.
     func pullDeltas(knowledge: KnowledgeService) async {
         guard let client = client else { return }
         state = .syncing
         statusMessage = "Checking for deltas..."
 
         let deltasPath = "\(Self.syncPath)/deltas/mac"
+        let lastApplied = UserDefaults.standard.string(forKey: Self.lastAppliedKey) ?? ""
 
         do {
             let result = try await withCheckedThrowingContinuation {
@@ -122,16 +227,23 @@ class SyncService: ObservableObject {
                 }
             }
 
-            let deltaFiles = result.entries
+            // Accept both .jsonl (new format) and .delta (legacy name) as bundle extensions.
+            // Filter by lastApplied — filenames are timestamped lexicographically.
+            let bundleFiles = result.entries
                 .compactMap { $0 as? Files.FileMetadata }
-                .filter { $0.name.hasSuffix(".delta") }
+                .filter { $0.name.hasSuffix(".jsonl") || $0.name.hasSuffix(".delta") }
+                .filter { $0.name > lastApplied }
                 .sorted { $0.name < $1.name }
 
-            pendingIncoming = deltaFiles.count
-            statusMessage = "\(deltaFiles.count) delta files found"
+            pendingIncoming = bundleFiles.count
+            statusMessage = "\(bundleFiles.count) new bundles"
 
-            for file in deltaFiles {
+            var totalApplied = 0
+            var latestApplied = lastApplied
+
+            for file in bundleFiles {
                 let localPath = localSyncDir.appendingPathComponent(file.name)
+
                 _ = try await withCheckedThrowingContinuation {
                     (continuation: CheckedContinuation<Files.FileMetadata, Error>) in
                     client.files.download(path: file.pathLower!, overwrite: true, destination: localPath)
@@ -144,33 +256,88 @@ class SyncService: ObservableObject {
                             }
                         }
                 }
+
+                do {
+                    let rows = try SyncBundle.read(from: localPath)
+                    for row in rows {
+                        knowledge.insert(row.toVector(),
+                                         path: row.path,
+                                         title: row.title,
+                                         domain: row.domain,
+                                         origin: .sync)
+                        totalApplied += 1
+                    }
+                    latestApplied = file.name
+                    UserDefaults.standard.set(latestApplied, forKey: Self.lastAppliedKey)
+                } catch {
+                    // Skip malformed bundle but keep going — do NOT advance the ack.
+                    statusMessage = "Skipped \(file.name): \(error.localizedDescription)"
+                }
+
                 pendingIncoming -= 1
             }
 
             lastSync = Date()
-            statusMessage = "Sync complete"
+            statusMessage = "Applied \(totalApplied) rows from \(bundleFiles.count) bundles"
         } catch {
             statusMessage = "Sync error: \(error.localizedDescription)"
         }
         state = .connected
     }
 
-    /// Upload outgoing deltas to Dropbox
+    /// Rotate any pending rows into a timestamped bundle and upload all unsent
+    /// bundles to Dropbox. On success, deletes local copies.
     func pushDeltas() async {
         guard let client = client else { return }
-        let outDir = localSyncDir.appendingPathComponent("deltas/iphone")
-        guard FileManager.default.fileExists(atPath: outDir.path) else { return }
+        state = .syncing
 
-        let files = (try? FileManager.default.contentsOfDirectory(at: outDir,
-            includingPropertiesForKeys: nil))?.filter { $0.pathExtension == "delta" } ?? []
+        _ = rotatePendingBundle()
+
+        let outDir = localSyncDir.appendingPathComponent("deltas/iphone")
+        guard FileManager.default.fileExists(atPath: outDir.path) else {
+            state = .connected
+            return
+        }
+
+        let files = ((try? FileManager.default.contentsOfDirectory(at: outDir,
+            includingPropertiesForKeys: nil)) ?? [])
+            .filter { $0.pathExtension == "jsonl" && $0.lastPathComponent != "pending.jsonl" }
+            .sorted { $0.lastPathComponent < $1.lastPathComponent }
+
+        statusMessage = "Pushing \(files.count) bundles..."
+        var uploaded = 0
 
         for file in files {
-            if let data = try? Data(contentsOf: file) {
-                let remotePath = "\(Self.syncPath)/deltas/iphone/\(file.lastPathComponent)"
+            guard let data = try? Data(contentsOf: file) else { continue }
+            let remotePath = "\(Self.syncPath)/deltas/iphone/\(file.lastPathComponent)"
+
+            let success = await withCheckedContinuation { (cont: CheckedContinuation<Bool, Never>) in
                 client.files.upload(path: remotePath, mode: .overwrite, input: data)
-                    .response { _, _ in }
+                    .response { result, error in
+                        cont.resume(returning: result != nil && error == nil)
+                    }
+            }
+
+            if success {
+                try? FileManager.default.removeItem(at: file)
+                uploaded += 1
+            } else {
+                // Leave on disk — will be retried next push.
+                statusMessage = "Upload failed for \(file.lastPathComponent)"
             }
         }
-        pendingOutgoing = 0
+
+        refreshPendingCount()
+        lastSync = Date()
+        statusMessage = "Pushed \(uploaded)/\(files.count) bundles"
+        state = .connected
     }
+}
+
+private extension JSONEncoder {
+    static let sortedKeys: JSONEncoder = {
+        let e = JSONEncoder()
+        e.outputFormatting = [.sortedKeys]
+        return e
+    }()
 }
