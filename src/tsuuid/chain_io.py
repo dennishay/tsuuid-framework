@@ -84,15 +84,22 @@ def persist_link(conn: sqlite3.Connection, link: ChainLink,
                  coherence_distance: Optional[float] = None,
                  source_db: Optional[str] = None,
                  source_table: Optional[str] = None,
-                 source_id: Optional[str] = None) -> None:
-    """Upsert a single ChainLink into chain_links."""
+                 source_id: Optional[str] = None,
+                 asset_tinyurl: Optional[str] = None) -> None:
+    """Upsert a single ChainLink into chain_links.
+
+    asset_tinyurl is the optional 6-8 char tinyurl tail (e.g. "2xpvlcsu")
+    that points to a Dropbox-hosted visual proof. Rendered as
+    [![](https://tinyurl.com/<tail>)](https://tinyurl.com/<tail>) by the
+    markdown viewer. TSUUID stays pure semantic; tinyurl is sibling metadata.
+    """
     conn.execute(
         """
         INSERT INTO chain_links
             (tsuuid, chain_id, position, trits, vec_768,
              source_db, source_table, source_id, source_path, domain,
-             prev_uuid, next_uuid, created_at, coherence_distance)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             prev_uuid, next_uuid, created_at, coherence_distance, asset_tinyurl)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(tsuuid) DO UPDATE SET
             chain_id = excluded.chain_id,
             position = excluded.position,
@@ -105,7 +112,8 @@ def persist_link(conn: sqlite3.Connection, link: ChainLink,
             domain = excluded.domain,
             prev_uuid = excluded.prev_uuid,
             next_uuid = excluded.next_uuid,
-            coherence_distance = excluded.coherence_distance
+            coherence_distance = excluded.coherence_distance,
+            asset_tinyurl = COALESCE(excluded.asset_tinyurl, chain_links.asset_tinyurl)
         """,
         (
             str(link.uuid),
@@ -122,6 +130,7 @@ def persist_link(conn: sqlite3.Connection, link: ChainLink,
             str(link.next_uuid) if link.next_uuid else None,
             link.created_at,
             coherence_distance,
+            asset_tinyurl,
         ),
     )
 
