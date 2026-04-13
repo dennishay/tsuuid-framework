@@ -58,8 +58,21 @@ final class SyncBundleTests: XCTestCase {
             let obj = try JSONSerialization.jsonObject(with: data) as? [String: Any]
             XCTAssertNotNil(obj)
             XCTAssertEqual(Set(obj!.keys),
-                           Set(["path", "title", "domain", "vec_b64", "version", "encoded_at"]))
+                           Set(["path", "title", "domain", "vec_b64", "version",
+                                "encoded_at", "schema_version"]))
+            XCTAssertEqual(obj?["schema_version"] as? Int, syncSchemaVersion)
         }
+    }
+
+    func testSchemaVersionDefaultsToOneOnLegacyRow() throws {
+        // Legacy bundle without schema_version — should decode to 1.
+        let vecB64 = Vector768.fromBytes(Data(repeating: 0, count: Vector768.byteCount)).toBase64()
+        let legacy = "{\"path\":\"p\",\"title\":\"t\",\"domain\":\"d\"," +
+                     "\"vec_b64\":\"\(vecB64)\",\"version\":1," +
+                     "\"encoded_at\":\"2026-04-12T12:00:00Z\"}"
+        let decoded = try SyncBundle.decode(legacy)
+        XCTAssertEqual(decoded.count, 1)
+        XCTAssertEqual(decoded[0].schema_version, 1)
     }
 
     func testWriteThenReadFile() throws {

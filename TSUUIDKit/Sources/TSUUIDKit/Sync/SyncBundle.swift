@@ -1,5 +1,10 @@
 import Foundation
 
+/// Wire schema version. Bumped when ``SyncRow`` field layout changes in a
+/// way older readers cannot safely ignore. Readers MUST refuse rows with
+/// ``schema_version > syncSchemaVersion`` (forward-compat drift guard).
+public let syncSchemaVersion: Int = 1
+
 /// Cross-device row sync bundle format.
 ///
 /// Each bundle file is JSON Lines (one row per line). Each row carries the
@@ -16,21 +21,28 @@ public struct SyncRow: Codable, Sendable, Equatable {
     public let vec_b64: String   // base64 of Vector768 float16 bytes (1536 B)
     public let version: Int
     public let encoded_at: String?
+    /// Wire schema version for this row. Defaults to ``syncSchemaVersion``.
+    /// Optional on decode so pre-schema_version bundles continue to parse
+    /// (treated as schema_version = 1).
+    public let schema_version: Int
 
     public init(path: String, title: String, domain: String,
                 vec_b64: String, version: Int = 1,
-                encoded_at: String? = nil) {
+                encoded_at: String? = nil,
+                schema_version: Int = syncSchemaVersion) {
         self.path = path
         self.title = title
         self.domain = domain
         self.vec_b64 = vec_b64
         self.version = version
         self.encoded_at = encoded_at
+        self.schema_version = schema_version
     }
 
     public init(path: String, title: String, domain: String,
                 vec: Vector768, version: Int = 1,
-                encodedAt: Date = Date()) {
+                encodedAt: Date = Date(),
+                schema_version: Int = syncSchemaVersion) {
         self.path = path
         self.title = title
         self.domain = domain
@@ -38,6 +50,24 @@ public struct SyncRow: Codable, Sendable, Equatable {
         self.version = version
         let fmt = ISO8601DateFormatter()
         self.encoded_at = fmt.string(from: encodedAt)
+        self.schema_version = schema_version
+    }
+
+    // Custom Decodable to tolerate legacy bundles without schema_version —
+    // they decode as schema_version = 1 (the original wire version).
+    private enum CodingKeys: String, CodingKey {
+        case path, title, domain, vec_b64, version, encoded_at, schema_version
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.path = try c.decode(String.self, forKey: .path)
+        self.title = (try? c.decode(String.self, forKey: .title)) ?? ""
+        self.domain = (try? c.decode(String.self, forKey: .domain)) ?? "general"
+        self.vec_b64 = try c.decode(String.self, forKey: .vec_b64)
+        self.version = (try? c.decode(Int.self, forKey: .version)) ?? 1
+        self.encoded_at = try? c.decode(String.self, forKey: .encoded_at)
+        self.schema_version = (try? c.decode(Int.self, forKey: .schema_version)) ?? 1
     }
 
     public func toVector() -> Vector768 {

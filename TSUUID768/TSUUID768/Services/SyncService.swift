@@ -259,7 +259,17 @@ class SyncService: ObservableObject {
 
                 do {
                     let rows = try SyncBundle.read(from: localPath)
+                    var skippedFutureRows = 0
                     for row in rows {
+                        // Drift guard: refuse rows written under a wire schema
+                        // we don't understand. Row is skipped (logged) rather
+                        // than blindly inserted — when we ship schema_version
+                        // > 1 support, the next iOS build picks them up on
+                        // the next pull.
+                        if row.schema_version > syncSchemaVersion {
+                            skippedFutureRows += 1
+                            continue
+                        }
                         knowledge.insert(row.toVector(),
                                          path: row.path,
                                          title: row.title,
@@ -267,6 +277,13 @@ class SyncService: ObservableObject {
                                          origin: .sync)
                         totalApplied += 1
                     }
+                    if skippedFutureRows > 0 {
+                        statusMessage = "\(file.name): skipped \(skippedFutureRows) future-schema rows"
+                    }
+                    // Ack advances either way: the file is fully read, and
+                    // future-schema rows are a forward-compat skip, not a
+                    // parse failure. Re-reading the same bundle next pull
+                    // would just skip them again.
                     latestApplied = file.name
                     UserDefaults.standard.set(latestApplied, forKey: Self.lastAppliedKey)
                 } catch {
