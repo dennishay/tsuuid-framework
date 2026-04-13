@@ -49,7 +49,19 @@ def test_jsonl_shape():
     assert len(lines) == 2
     for line in lines:
         obj = json.loads(line)
-        assert set(obj.keys()) == {"path", "title", "domain", "vec_b64", "version", "encoded_at"}
+        assert set(obj.keys()) == {"path", "title", "domain", "vec_b64", "version",
+                                    "encoded_at", "schema_version"}
+        assert obj["schema_version"] == 1
+
+
+def test_schema_version_default_on_missing_field():
+    # Backward-compat: old bundles without schema_version default to 1.
+    legacy = ('{"path":"p","title":"t","domain":"d",'
+              '"vec_b64":"' + base64.b64encode(b"\x00" * 1536).decode("ascii") + '",'
+              '"version":1,"encoded_at":"2026-04-12T12:00:00Z"}')
+    rows = read_sync_bundle(legacy)
+    assert len(rows) == 1
+    assert rows[0].schema_version == 1
 
 
 def test_vec_bytes_roundtrip():

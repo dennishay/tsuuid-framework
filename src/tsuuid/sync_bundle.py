@@ -24,6 +24,12 @@ from dataclasses import asdict, dataclass
 from typing import Iterable, List, Optional
 
 
+# Wire schema version. Bumped when SyncRow field layout changes in a way
+# that older readers cannot safely ignore. Readers MUST refuse rows with
+# schema_version > SYNC_SCHEMA_VERSION (forward-compat drift guard).
+SYNC_SCHEMA_VERSION = 1
+
+
 @dataclass
 class SyncRow:
     path: str
@@ -32,6 +38,7 @@ class SyncRow:
     vec_b64: str
     version: int = 1
     encoded_at: Optional[str] = None
+    schema_version: int = SYNC_SCHEMA_VERSION
 
     def to_json(self) -> str:
         return json.dumps(asdict(self), separators=(",", ":"), ensure_ascii=False)
@@ -46,6 +53,7 @@ class SyncRow:
             vec_b64=obj["vec_b64"],
             version=int(obj.get("version", 1)),
             encoded_at=obj.get("encoded_at"),
+            schema_version=int(obj.get("schema_version", 1)),
         )
 
     def vec_bytes(self) -> bytes:
