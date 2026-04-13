@@ -3,8 +3,9 @@ __pycache__/
 *.pyo
 .pytest_cache/
 .venv/
-models/*.mlpackage
-models/*.mlmodelc
-models/*.db
-models/*.onnx
-models/*.onnx.data
+
+# Models live in Dropbox (__768_sync/tsuuid-framework-models) and are
+# symlinked into this tree. Large binaries exceed GitHub's 100 MB cap, so
+# the entire models/ path stays out of the repo — including the symlink.
+models
+models/
