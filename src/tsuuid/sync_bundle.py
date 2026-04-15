@@ -39,6 +39,8 @@ class SyncRow:
     version: int = 1
     encoded_at: Optional[str] = None
     schema_version: int = SYNC_SCHEMA_VERSION
+    encoded_on: Optional[str] = None
+    tiny_url: Optional[str] = None
 
     def to_json(self) -> str:
         return json.dumps(asdict(self), separators=(",", ":"), ensure_ascii=False)
@@ -54,6 +56,8 @@ class SyncRow:
             version=int(obj.get("version", 1)),
             encoded_at=obj.get("encoded_at"),
             schema_version=int(obj.get("schema_version", 1)),
+            encoded_on=obj.get("encoded_on"),
+            tiny_url=obj.get("tiny_url"),
         )
 
     def vec_bytes(self) -> bytes:
