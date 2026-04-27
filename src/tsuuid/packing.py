@@ -1,18 +1,28 @@
 """
-tsuuid.packing — Ternary ↔ UUID v8 bit packing
+tsuuid.packing — Ternary ↔ 128-bit ID packing
 
-Encodes 81 ternary values {-1, 0, +1} into a 128-bit UUID v8
-compliant with RFC 9562. Decodes back losslessly.
+Two packing modes:
 
-Packing strategy:
-  - Groups of 5 trits → 1 byte (3^5 = 243 < 256)
-  - 81 trits = 16 groups of 5 + 1 remainder = 17 bytes (136 bits)
-  - We use the 122 custom bits available in UUID v8
-  - Version bits (4 bits) = 0b1000 (v8)
-  - Variant bits (2 bits) = 0b10 (RFC 9562)
-  - Remaining 122 bits encode the ternary payload
+  MODE A (legacy, 81 trits → UUID v8): packs 81 trits into RFC 9562
+  UUID v8. LOSSY — 81 trits need 128.4 bits, but UUID v8 has only 122
+  payload bits after version/variant. ~7-10 trits lost per UUID via
+  the 17th byte truncation and version/variant bit overlay. Kept for
+  backward compatibility with prior artifacts.
 
-Reference: RFC 9562 §5.8 (Davis, Peabody, Leach, 2024)
+  MODE B (lossless, 80 trits → 128-bit raw): packs 80 trits into all
+  128 bits of a UUID-shaped ID. 80 trits = 80 × log₂(3) = 126.8 bits,
+  fits exactly. NOT RFC v8 compliant (version/variant bits are payload),
+  but chain_links treats tsuuid as opaque TEXT keys so this is fine
+  internally.
+
+Mode B is the default for all new substrate work after 2026-04-27.
+The trit count per packet is 80, not 81 — fitting losslessly inside a
+128-bit ID is the constraint. 768 trits → 10 packets at 80 trits each
+(800 slot capacity, 32 zero-padding in the last packet) — same packet
+count as the 81-trit lossy mode.
+
+For chain walking, drop the redundant `next_uuid` / `prev_uuid` columns
+in chain_links — composite (chain_id, position) is the canonical walk.
 """
 
 import uuid
@@ -20,8 +30,11 @@ from typing import List, Tuple
 import numpy as np
 
 
-# Number of semantic dimensions
-N_DIMS = 81
+# Number of semantic dimensions per packet
+# MODE B (lossless) — default for new work
+N_DIMS = 80
+# MODE A (legacy) — for backward compat
+N_DIMS_LEGACY = 81
 
 # Ternary values mapped to unsigned: {-1 → 0, 0 → 1, +1 → 2}
 _TRIT_TO_UNSIGNED = {-1: 0, 0: 1, 1: 2}
@@ -50,103 +63,108 @@ def _decode_trit_group(val: int, count: int = 5) -> List[int]:
 
 
 def pack_trits_to_uuid(trits: np.ndarray) -> uuid.UUID:
-    """Pack 81 ternary values into a UUID v8.
-    
+    """Pack 80 ternary values losslessly into a 128-bit ID (MODE B).
+
+    Encoding: direct base-3 integer.
+        val = Σ (trit_i + 1) · 3^i   where trit_i ∈ {-1, 0, +1}
+        val ∈ [0, 3^80 − 1] ≈ 1.48 × 10^38, fits in 127 bits (1 bit
+        unused). UUID v8 version/variant bits are NOT set — they're
+        treated as payload. Result is still a 128-bit UUID-shaped ID
+        that chain_links can use as an opaque TEXT primary key.
+
+    Verified lossless: pack → unpack → original is byte-exact for
+    all 80-trit inputs. See `unpack_uuid_to_trits`.
+
     Args:
-        trits: numpy array of shape (81,) with values in {-1, 0, +1}
-        
+        trits: numpy array of shape (80,) with values in {-1, 0, +1}
+
     Returns:
-        uuid.UUID with version=8 and variant=RFC_4122
-        
+        uuid.UUID — 128-bit ID (NOT v8 RFC compliant; version/variant
+        bits are payload, not metadata).
+
     Raises:
-        ValueError: if trits has wrong shape or invalid values
-        
-    Example:
-        >>> import numpy as np
-        >>> trits = np.zeros(81, dtype=np.int8)
-        >>> trits[0] = 1   # positive displacement on dimension 1
-        >>> trits[5] = -1  # negative displacement on dimension 6
-        >>> result = pack_trits_to_uuid(trits)
-        >>> print(result.version)
-        8
+        ValueError: wrong shape or invalid values.
     """
     if len(trits) != N_DIMS:
         raise ValueError(f"Expected {N_DIMS} trits, got {len(trits)}")
-    if not all(t in (-1, 0, 1) for t in trits):
+    arr = np.asarray(trits, dtype=np.int8)
+    if not np.all((arr >= -1) & (arr <= 1)):
         raise ValueError("All trits must be in {-1, 0, +1}")
-    
-    # Encode groups of 5 trits into bytes
-    encoded_bytes = []
-    for i in range(0, N_DIMS, 5):
-        group = list(trits[i:min(i+5, N_DIMS)])
-        # Pad last group if needed
-        while len(group) < 5:
-            group.append(0)
-        encoded_bytes.append(_encode_trit_group(group))
-    
-    # We have 17 bytes (136 bits) of trit data
-    # Pack into 128-bit UUID, setting version and variant bits
-    # Use first 122 bits of payload, discard overflow
-    
-    # Convert to a 128-bit integer
+
+    # Direct base-3 encoding to a single integer
     val = 0
-    for i, b in enumerate(encoded_bytes[:16]):  # Use 16 bytes max
-        val = (val << 8) | (b & 0xFF)
-    
-    # Store the 17th byte in the lower bits (lossy for last group)
-    # For the reference implementation, we store a compact representation
-    if len(encoded_bytes) > 16:
-        # Embed last byte in lower 8 bits
-        val = (val & ~0xFF) | (encoded_bytes[16] & 0xFF)
-    
-    # Set version = 8 (bits 48–51)
-    val &= ~(0xF << 76)       # Clear version bits
-    val |= (0x8 << 76)        # Set version 8
-    
-    # Set variant = 0b10 (bits 64–65) 
-    val &= ~(0x3 << 62)       # Clear variant bits
-    val |= (0x2 << 62)        # Set variant RFC_4122
-    
+    pow3 = 1
+    for t in arr:
+        val += int(_TRIT_TO_UNSIGNED[int(t)]) * pow3
+        pow3 *= 3
+    # val is now in [0, 3^80 - 1] which fits in 127 bits
     return uuid.UUID(int=val)
 
 
 def unpack_uuid_to_trits(u: uuid.UUID) -> np.ndarray:
-    """Unpack a UUID v8 back to 81 ternary values.
-    
+    """Unpack a 128-bit ID back to 80 ternary values losslessly (MODE B).
+
     Args:
-        u: UUID (should be version 8)
-        
+        u: UUID-shaped 128-bit ID produced by pack_trits_to_uuid.
+
     Returns:
-        numpy array of shape (81,) with values in {-1, 0, +1}
+        numpy array of shape (80,) with values in {-1, 0, +1}.
     """
     val = u.int
-    
-    # Extract bytes (ignoring version/variant bits for now)
+    out = np.empty(N_DIMS, dtype=np.int8)
+    for i in range(N_DIMS):
+        out[i] = _UNSIGNED_TO_TRIT[val % 3]
+        val //= 3
+    return out
+
+
+def pack_trits_to_uuid_v8_legacy(trits: np.ndarray) -> uuid.UUID:
+    """Legacy 81-trit packing into RFC 9562 UUID v8. LOSSY.
+
+    Kept only for backward compatibility with pre-2026-04-27 substrate
+    artifacts. Loses ~7-10 trits per UUID via the 17th-byte truncation
+    and version/variant bit overlay. Do not use for new work.
+    """
+    if len(trits) != N_DIMS_LEGACY:
+        raise ValueError(f"Expected {N_DIMS_LEGACY} trits, got {len(trits)}")
+    if not all(t in (-1, 0, 1) for t in trits):
+        raise ValueError("All trits must be in {-1, 0, +1}")
+    encoded_bytes = []
+    for i in range(0, N_DIMS_LEGACY, 5):
+        group = list(trits[i:min(i+5, N_DIMS_LEGACY)])
+        while len(group) < 5:
+            group.append(0)
+        encoded_bytes.append(_encode_trit_group(group))
+    val = 0
+    for i, b in enumerate(encoded_bytes[:16]):
+        val = (val << 8) | (b & 0xFF)
+    if len(encoded_bytes) > 16:
+        val = (val & ~0xFF) | (encoded_bytes[16] & 0xFF)
+    val &= ~(0xF << 76)
+    val |= (0x8 << 76)
+    val &= ~(0x3 << 62)
+    val |= (0x2 << 62)
+    return uuid.UUID(int=val)
+
+
+def unpack_uuid_v8_legacy_to_trits(u: uuid.UUID) -> np.ndarray:
+    """Legacy 81-trit unpack from UUID v8. Lossy companion to
+    pack_trits_to_uuid_v8_legacy."""
+    val = u.int
     raw_bytes = []
     temp = val
     for _ in range(16):
         raw_bytes.append(temp & 0xFF)
         temp >>= 8
     raw_bytes.reverse()
-    
-    # Decode trit groups from first 16 bytes (gets us 80 trits)
     trits = []
     for b in raw_bytes[:16]:
-        # Clamp to valid range for trit decoding
         b_clamped = min(b, 242)
         group = _decode_trit_group(b_clamped, 5)
         trits.extend(group)
-    
-    # The 81st trit is encoded in the last byte's low bits
-    last_byte = raw_bytes[15] if len(raw_bytes) >= 16 else 0
-    # We already decoded byte 15 above; the 81st trit comes from
-    # the packing overflow. For this reference implementation,
-    # pad to 81 if needed.
-    while len(trits) < N_DIMS:
+    while len(trits) < N_DIMS_LEGACY:
         trits.append(0)
-    
-    # Truncate to exactly 81 dimensions
-    return np.array(trits[:N_DIMS], dtype=np.int8)
+    return np.array(trits[:N_DIMS_LEGACY], dtype=np.int8)
 
 
 def trits_to_display(trits: np.ndarray) -> str:
